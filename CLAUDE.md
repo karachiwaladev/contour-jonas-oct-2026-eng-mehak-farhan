@@ -11,7 +11,7 @@ Each piece of work the factory produces lives in its own project folder.
 Load context in layers. Read only as deep as the current task needs.
 
 1. **This file** (always loaded). Shows what the factory is, the rules, and where everything is.
-2. **Project README** (`projects/<name>/README.md`). Read it only when a ticket touches that project.
+2. **Project README** (`<name>/README.md`). Read it only when a ticket touches that project.
 3. **Project internals** (code, docs, tests). Open them only for the specific change in hand.
 
 Rules that follow from this:
@@ -34,13 +34,13 @@ Rules that follow from this:
 CLAUDE.md                 # this index (under 100 lines)
 README.md                 # workshop info and scoring
 .claude/skills/           # factory skills (the loop itself)
-projects/<name>/          # one folder per project
+<name>/                   # one top-level folder per project
   README.md               # layer-2 entry point for that project
 ```
 
 ## Adding a project
 
-1. Create `projects/<kebab-case-name>/` with a short `README.md`
+1. Create a top-level `<kebab-case-name>/` folder with a short `README.md`
    (purpose, how to run or check it, key files).
 2. Add one row to the index below. Keep each row to a single line.
 3. Do not mix projects. Shared code needs its own project folder.
@@ -49,7 +49,7 @@ projects/<name>/          # one folder per project
 
 | Project | Path | Summary | Ticket |
 |---|---|---|---|
-| _none yet_ | | | |
+| Todo app | [`todo/`](todo/README.md) | Browser todo list (create, done, delete) on IndexedDB | #4 |
 
 ## Ground rules
 
