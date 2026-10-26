@@ -29,8 +29,9 @@ Rules that follow from this:
 - Ticket state is tracked by hidden `<!-- factory:<stage> -->` markers on the factory's comments.
 - **Never destructive:** no force-push, hard reset, clean, or deleting files, issues or repos.
   Deny rules in `.claude/settings.json` enforce this.
-- The Stop hook logs prompts to `.claude/prompts.jsonl`, then commits and pushes everything.
-  Ticket work is also committed explicitly as `Ticket #<N>: <summary>`.
+- Ticket work goes on a `ticket-<N>-<slug>` branch and lands as a **PR** for the owner to review.
+  It is **never merged without the owner's explicit go-ahead**, and `gh pr merge` always prompts.
+- The Stop hook logs prompts to `.claude/prompts.jsonl`, then commits and pushes the current branch.
 
 ## Repo layout
 

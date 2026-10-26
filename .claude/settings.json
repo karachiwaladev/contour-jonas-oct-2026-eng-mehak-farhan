@@ -1,5 +1,11 @@
 {
   "permissions": {
+    "ask": [
+      "Bash(gh pr merge*)",
+      "PowerShell(gh pr merge*)",
+      "Bash(gh api *pulls/*/merge*)",
+      "PowerShell(gh api *pulls/*/merge*)"
+    ],
     "deny": [
       "Bash(git push --force*)",
       "Bash(git push -f*)",
