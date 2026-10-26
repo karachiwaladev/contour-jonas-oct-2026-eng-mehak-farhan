@@ -20,7 +20,11 @@ database (IndexedDB), so they persist across reloads with no server.
   one is never overdue. Monthly repeats keep the day of the month, clamped to shorter months (Jan 31 → Feb 28).
   Unticking and re-ticking doesn't create duplicates, and deleting the open occurrence ends the series.
 
-Due date, tags and repeat are set when a task is created. Editing them later isn't supported yet.
+- **Priority:** High, Medium or Low (default Medium) on each task, shown as a colored badge. Open tasks sort by
+  priority, then due date. The **Priority** chips filter by any selected priority, combine with the other filters and
+  are remembered after a reload. Older tasks without a priority count as Medium. Recurring tasks keep their priority.
+- **Edit:** each task has an **Edit** button that opens an inline form for its title, due date, tags, repeat and
+  priority, with **Save** and **Cancel**. An empty title is rejected.
 
 ## Tests
 
@@ -44,6 +48,8 @@ Serving the folder also works, e.g. `npx serve todo`.
 | `filters.js` | Pure logic: tag parsing, sorting, filtering, due labels, saved-filter loading |
 | `recurrence.js` | Pure logic: repeat patterns, next due date, next occurrence |
 | `render.js` | DOM building (`textContent` only) |
+| `priority.js` | Pure logic: priority levels, allowlist, sort rank, labels |
+| `editor.js` | Inline edit form: builds it prefilled, reads back validated values |
 | `tests/` | `node:test` unit tests, plus `tests/browser/` headless browser tests |
 | `screenshots/` | Browser verification screenshots, per ticket |
 | `style.css` | Styles, with light and dark themes |

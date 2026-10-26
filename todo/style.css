@@ -90,7 +90,7 @@ button:focus-visible, input:focus-visible {
   border-radius: 8px;
 }
 
-.task input { width: 18px; height: 18px; accent-color: var(--accent); }
+.task input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
 
 .task-body { flex: 1; min-width: 0; }
 
