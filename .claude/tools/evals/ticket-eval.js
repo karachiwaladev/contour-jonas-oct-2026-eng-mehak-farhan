@@ -149,4 +149,6 @@ function main() {
   return checks.some((c) => c.status === 'FAIL') ? 1 : 0;
 }
 
-process.exitCode = main();
+module.exports = { locateCode };
+
+if (require.main === module) process.exitCode = main();
