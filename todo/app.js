@@ -67,11 +67,20 @@ form.addEventListener('submit', async (e) => {
   await refresh();
 });
 
-list.addEventListener('change', async (e) => {
+// Toggles run one at a time: each read-modify-write finishes before the next starts, so a fast
+// tick/untick can't read a stale task and wipe spawnedNext (which would allow duplicate occurrences).
+let toggleQueue = Promise.resolve();
+list.addEventListener('change', (e) => {
   if (e.target.dataset.action !== 'toggle') return;
-  const task = await TaskDB.get(Number(e.target.closest('.task').dataset.id));
+  const id = Number(e.target.closest('.task').dataset.id);
+  const checked = e.target.checked; // capture now; the checkbox may change again before this runs
+  toggleQueue = toggleQueue.then(() => toggleTask(id, checked)).catch((err) => announce('Could not update the task: ' + err.message));
+});
+
+async function toggleTask(id, checked) {
+  const task = await TaskDB.get(id);
   if (!task) return;
-  task.done = e.target.checked;
+  task.done = checked;
   // Completing a recurring task creates exactly one next occurrence; spawnedNext stops re-ticks making copies.
   const next = Recurrence.nextOccurrence(task);
   if (next) {
@@ -81,7 +90,7 @@ list.addEventListener('change', async (e) => {
   await TaskDB.put(task);
   announce(`Marked "${task.title}" ${task.done ? 'done' : 'not done'}${next ? '. Next one added.' : ''}`);
   await refresh();
-});
+}
 
 list.addEventListener('click', async (e) => {
   if (e.target.dataset.action !== 'delete') return;
