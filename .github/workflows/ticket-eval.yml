@@ -1,0 +1,47 @@
+name: Ticket eval
+
+# Scores a finished ticket (Engineering + QA) and posts the scorecard on it. Runs when a "Ticket ..." issue is
+# closed as completed, or on demand: Actions -> Ticket eval -> Run workflow -> ticket number.
+on:
+  issues:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      ticket:
+        description: 'Ticket (issue) number to evaluate'
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  eval:
+    if: github.event_name == 'workflow_dispatch' || (github.event.issue.state_reason == 'completed' && startsWith(github.event.issue.title, 'Ticket'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the eval compares the code before and after the ticket
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Run ticket eval and post the scorecard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BROWSER: /usr/bin/google-chrome
+          TICKET: ${{ github.event.issue.number || inputs.ticket }}
+        run: |
+          node .claude/tools/evals/ticket-eval.js "$TICKET" --post --json eval.json | tee -a "$GITHUB_STEP_SUMMARY"
+          exit ${PIPESTATUS[0]}
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ticket-eval
+          path: eval.json
+          if-no-files-found: ignore

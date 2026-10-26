@@ -28,6 +28,7 @@ Every comment the factory posts ends with a hidden marker naming its stage:
 | `<!-- factory:review -->` | Work is in an open PR, awaiting the owner's review and go-ahead to merge |
 | `<!-- factory:done -->` | The final answer or report (questions), or the PR is merged |
 | `<!-- factory:declined -->` | A refusal of destructive or out-of-rules work |
+| `<!-- factory:eval -->` | The ticket eval scorecard. **Informational only: ignore it when working out the ticket's state** |
 
 A **human reply** is any comment *without* a factory marker. Work out the ticket's state from the latest factory comment and whether a human reply follows it:
 
@@ -177,11 +178,22 @@ For a ticket whose latest factory comment is `review`, check `gh pr view <branch
 
 | PR state | What to do |
 |---|---|
-| **Merged** | Confirm the ticket closed (`gh issue view <N> --json state`). If it didn't, close it with `--reason completed`. Post a short `factory:done` comment on the ticket. Switch to `main` and `git pull --ff-only`. |
+| **Merged** | Confirm the ticket closed (`gh issue view <N> --json state`). If it didn't, close it with `--reason completed`. Post a short `factory:done` comment on the ticket. Switch to `main` and `git pull --ff-only`. The **Ticket eval** workflow then posts a scorecard on the ticket (see **After a ticket: evals**). |
 | **Change requests** (review comments, "changes requested", or a human comment asking for edits) | Switch to the branch, make the changes (test-first), re-verify the affected acceptance checks in the browser (with new screenshots if the UI changed), commit, and push. Re-run the `pr-review` skill, reply on the PR listing what changed, then post a fresh `factory:review` comment on the ticket. |
 | **Merge go-ahead from the owner** | Run `gh pr merge <PR> --squash`. Keep the branch: no `--delete-branch`. Then do what the **Merged** row says. |
 | **Closed without merging** | Leave the ticket open. Post a `factory:declined`-style note asking what to do next, but only once. |
 | Anything else | Waiting. Skip silently. |
+
+## After a ticket: evals
+
+When a `Ticket ...` issue closes as completed, `.github/workflows/ticket-eval.yml` runs `.claude/tools/evals/ticket-eval.js` and posts a `factory:eval` scorecard on the ticket. Run it by hand with `node .claude/tools/evals/ticket-eval.js <N> [--post] [--quick]`. It scores two areas:
+
+| Area | Checks |
+|---|---|
+| **Engineering** | Unit tests written. **Fail-to-pass:** each new or changed test fails on the code from before the ticket and passes after. The full unit suite passes. **PR risk** (Low/Medium/High with reasons) |
+| **QA** | Every plan acceptance check is ✅ in the PRs. Screenshots exist in the repo. Browser tests pass. Browser coverage is ≥ 80% per file. The project's **golden set** passes 100% |
+
+If a check fails, open a follow-up ticket for it. For example, a test that passes even before the ticket proves nothing, so strengthen it. When a bug is fixed, add it to the project's golden set (`<project>/tests/golden/*.json`).
 
 ## Posting comments
 

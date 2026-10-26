@@ -1,0 +1,16 @@
+{
+  "module": "filters.js",
+  "description": "Golden edge cases for tags, filtering and sorting. Must stay at 100%.",
+  "cases": [
+    { "id": "tags-messy-input", "fn": "parseTags", "args": [" , A ,a,, b ,"], "expect": ["a", "b"], "why": "empty entries, duplicates and case are normalized" },
+    { "id": "tags-empty", "fn": "parseTags", "args": [""], "expect": [], "why": "no tags" },
+    { "id": "tags-dedupe-case", "fn": "parseTags", "args": ["Work, work , Urgent"], "expect": ["work", "urgent"], "why": "ticket #5 acceptance example" },
+    { "id": "tag-filter-matches-any", "fn": "matchesFilters", "args": [{ "done": false, "tags": ["home", "family"] }, { "status": "all", "tags": ["work", "family"] }], "expect": true, "why": "multi-tag filter is ANY, not ALL" },
+    { "id": "tag-filter-no-match", "fn": "matchesFilters", "args": [{ "done": false, "tags": ["home"] }, { "status": "all", "tags": ["work"] }], "expect": false, "why": "no shared tag" },
+    { "id": "incomplete-hides-done", "fn": "matchesFilters", "args": [{ "done": true, "tags": [] }, { "status": "open", "tags": [] }], "expect": false, "why": "status filter" },
+    { "id": "status-and-tags-combine", "fn": "matchesFilters", "args": [{ "done": true, "tags": ["work"] }, { "status": "open", "tags": ["work"] }], "expect": false, "why": "filters combine with AND across status and tags" },
+    { "id": "open-sorts-before-done", "fn": "compareTasks", "args": [{ "done": false, "due": null, "createdAt": 5 }, { "done": true, "due": null, "createdAt": 1 }], "expect": -1, "why": "completed tasks always last" },
+    { "id": "dated-before-undated", "fn": "compareTasks", "args": [{ "done": false, "due": "2026-11-01T09:00", "createdAt": 9 }, { "done": false, "due": null, "createdAt": 1 }], "expect": -1, "why": "undated open tasks sort after dated ones" },
+    { "id": "prune-stale-tag-selection", "fn": "pruneTags", "args": [["home", "gone"], [{ "tags": ["home"] }]], "expect": ["home"], "why": "deleting a tag's last task drops it from the filter" }
+  ]
+}

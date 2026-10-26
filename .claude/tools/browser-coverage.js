@@ -20,7 +20,8 @@ if (typeof WebSocket === 'undefined' && !process.env.FACTORY_COVERAGE_CHILD) {
 }
 
 const { findBrowser, findPages } = require('./browser-test');
-const root = path.resolve(__dirname, '..', '..');
+// FACTORY_ROOT lets the evals test another checkout (e.g. a worktree at a ticket's final commit).
+const root = process.env.FACTORY_ROOT ? path.resolve(process.env.FACTORY_ROOT) : path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
 const num = (flag, def) => (args.includes(flag) ? Number(args[args.indexOf(flag) + 1]) : def);
 const MIN = num('--min', 80), WARN = num('--warn', 90), PORT = num('--port', 8793), DEBUG_PORT = PORT + 100;

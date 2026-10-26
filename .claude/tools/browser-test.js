@@ -8,7 +8,8 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const root = path.resolve(__dirname, '..', '..');
+// FACTORY_ROOT lets the evals test another checkout (e.g. a worktree at a ticket's final commit).
+const root = process.env.FACTORY_ROOT ? path.resolve(process.env.FACTORY_ROOT) : path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2);
 const opt = (name, def) => (args.includes(name) ? Number(args[args.indexOf(name) + 1]) : def);
 const port = opt('--port', 8790);

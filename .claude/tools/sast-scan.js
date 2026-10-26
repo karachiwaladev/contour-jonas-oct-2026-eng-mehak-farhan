@@ -20,7 +20,10 @@ const LINE_RULES = [
     message: 'new Function executes arbitrary code.' },
   { id: 'string-timer', severity: 'high', files: JS, re: /\bset(?:Timeout|Interval)\s*\(\s*['"`]/,
     message: 'String timers are evaluated like eval. Pass a function.' },
-  { id: 'command-injection', severity: 'high', files: JS, re: /\b(?:exec|execSync|spawn|spawnSync)\s*\(\s*`[^`]*\$\{/,
+  // Bare calls (destructured from child_process) or calls on a child_process handle. `.exec()` on anything else is
+  // treated as RegExp.prototype.exec, which is not a shell.
+  { id: 'command-injection', severity: 'high', files: JS,
+    re: /(?:(?:^|[^\w.$])|\b(?:cp|child_process|childProcess|childproc|shell|proc)\.)(?:exec|execSync|spawn|spawnSync)\s*\(\s*`[^`]*\$\{/,
     message: 'Shell command built from interpolated data. Use execFile/spawn with an args array.' },
   { id: 'react-dangerous-html', severity: 'high', files: JS, re: /dangerouslySetInnerHTML/, // sast-scan: allow (rule definition)
     message: 'dangerouslySetInnerHTML renders raw HTML.' }, // sast-scan: allow (rule definition)
