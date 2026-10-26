@@ -63,7 +63,22 @@ const Filters = (() => {
     return { ...DEFAULT_FILTERS, tags: [] };
   }
 
-  return { parseTags, dueInfo, compareTasks, matchesFilters, allTags, pruneTags, loadFilters };
+  // localStorage can throw on access (blocked storage, some private modes); fall back to a no-op store.
+  function safeStorage(win) {
+    try { return win.localStorage; } catch { return { getItem: () => null, setItem() {} }; }
+  }
+
+  // Saves filters; returns false instead of throwing when storage is full or blocked.
+  function saveFilters(storage, filters, key = 'todo-filters') {
+    try {
+      storage.setItem(key, JSON.stringify(filters));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return { parseTags, dueInfo, compareTasks, matchesFilters, allTags, pruneTags, loadFilters, safeStorage, saveFilters };
 })();
 
 if (typeof module !== 'undefined') module.exports = Filters;

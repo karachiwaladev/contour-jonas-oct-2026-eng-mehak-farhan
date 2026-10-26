@@ -94,4 +94,6 @@ async function main() {
   return failed ? 1 : 0;
 }
 
-main().then((code) => setTimeout(() => process.exit(code), 700));
+module.exports = { findBrowser, findPages };
+
+if (require.main === module) main().then((code) => setTimeout(() => process.exit(code), 700));

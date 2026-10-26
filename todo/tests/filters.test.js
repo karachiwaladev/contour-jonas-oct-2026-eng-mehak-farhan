@@ -1,7 +1,7 @@
 // Pins down the todo app's filter, sort and label logic as it is today, before and after the refactor.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseTags, dueInfo, compareTasks, matchesFilters, pruneTags, loadFilters } = require('../filters');
+const { parseTags, dueInfo, compareTasks, matchesFilters, pruneTags, loadFilters, safeStorage, saveFilters } = require('../filters');
 
 const task = (over) => ({ id: 1, title: 't', done: false, createdAt: 1, due: null, tags: [], ...over });
 
@@ -67,4 +67,30 @@ test('loadFilters: falls back to defaults on missing, corrupt or invalid storage
   assert.deepEqual(loadFilters(store('{"status":"weird","tags":[]}')), { status: 'all', tags: [] });
   assert.deepEqual(loadFilters(store('{"status":"open","tags":["a"]}')), { status: 'open', tags: ['a'] });
   assert.deepEqual(loadFilters({ getItem: () => { throw new Error('blocked'); } }), { status: 'all', tags: [] });
+});
+
+test('safeStorage: returns the window localStorage when accessible', () => {
+  const store = { getItem: () => null, setItem() {} };
+  assert.equal(safeStorage({ localStorage: store }), store);
+});
+
+test('safeStorage: blocked storage (getter throws) falls back to a no-op store', () => {
+  const blocked = Object.defineProperty({}, 'localStorage', { get() { throw new Error('SecurityError: access denied'); } });
+  const store = safeStorage(blocked);
+  assert.equal(store.getItem('todo-filters'), null);
+  assert.doesNotThrow(() => store.setItem('todo-filters', '{}'));
+  // and the app's filter loading still works on top of it
+  assert.deepEqual(loadFilters(store), { status: 'all', tags: [] });
+});
+
+test('saveFilters: writes the filters as JSON and reports success', () => {
+  const saved = {};
+  const store = { setItem: (k, v) => { saved[k] = v; } };
+  assert.equal(saveFilters(store, { status: 'open', tags: ['a'] }), true);
+  assert.deepEqual(JSON.parse(saved['todo-filters']), { status: 'open', tags: ['a'] });
+});
+
+test('saveFilters: a failing setItem (quota exceeded, blocked) is swallowed and reported', () => {
+  const full = { setItem() { throw new Error('QuotaExceededError'); } };
+  assert.equal(saveFilters(full, { status: 'all', tags: [] }), false);
 });

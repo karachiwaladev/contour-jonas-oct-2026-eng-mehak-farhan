@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- Failure paths: the app must tell the user when IndexedDB is unavailable, never fail silently or throw.
+     Run: node .claude/tools/browser-test.js todo/tests/browser/errors.test.html -->
+<html><head><meta charset="utf-8"><title>todo error-path browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+
+// Make the app's own indexedDB.open('todo-app', 1) fail for real: create the database at a NEWER version first,
+// so the browser rejects the app's lower-version open with a VersionError. (Same origin, fresh private profile.)
+function createNewerDatabase() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('todo-app', 2);
+    req.onsuccess = () => { req.result.close(); resolve(); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+T.test('database that cannot be opened: the user sees a clear error message', async () => {
+  await createNewerDatabase();
+  await T.open('/todo/index.html');
+  await T.until(() => T.$('#status').textContent.startsWith('Could not open the local database'), 'database error message');
+  T.expect(T.$$('.task').length === 0, 'no tasks rendered');
+});
+
+T.test('adding a task while the database is unavailable reports an error instead of failing silently', async () => {
+  T.$('#status').textContent = ''; // clear test 1's message so it can't satisfy this check
+  T.fill('#task-title', 'Will not save');
+  T.submit('#new-task');
+  await T.until(() => T.$('#status').textContent.startsWith('Could not save'), '"Could not save" message');
+  await new Promise((r) => setTimeout(r, 100)); // any unhandled rejection from the submit lands inside this test
+  T.expect(T.$$('.task').length === 0, 'nothing rendered as saved');
+});
+
+T.test('switching filters while the database is unavailable does not throw', async () => {
+  T.click('[data-status="done"]');
+  T.click('[data-status="all"]');
+  await new Promise((r) => setTimeout(r, 200)); // let the async refreshes settle; the harness fails on any page error
+  T.expect(T.$('[data-status="all"]').getAttribute('aria-pressed') !== null, 'filter buttons still present');
+});
+</script>
+</body></html>
