@@ -12,6 +12,7 @@ Tickets arrive as GitHub issues in this repo. This loop turns each one into **fi
 - **Never take a destructive action.** No `git push --force`, `git reset --hard`, `git clean`, history rewrites, branch deletes, or deleting files, folders, issues, comments or repos. Change existing files with targeted edits, not wholesale rewrites. If a ticket asks for something destructive, don't do it: comment explaining why, leave the ticket open for a human, and move on.
 - Follow `README.md`: no Jonas or Contour code, and no real keys or secrets.
 - Follow `CLAUDE.md`: one top-level folder per project, with a README, and one index row in `CLAUDE.md`.
+- **Follow the `engineering-standards` skill for all code.** Load it before planning or building. It covers security by design, TDD, the design limits (no god objects), the quality gate and the PR self-review.
 - **Every repo change goes through a pull request.** Work on a ticket branch, open a PR to `main`, ask the repo owner to review it, and **never merge until they explicitly say so**. Don't commit ticket work to `main`. See **Branches and pull requests**.
 - Only what is on GitHub counts. The Stop hook (`.claude/hooks/on-stop.sh`) commits anything left uncommitted at the end of every turn and pushes the *current branch*. So stay on the ticket branch while working, and make explicit `Ticket #<N>: ...` commits, because comments need the SHA.
 
@@ -78,7 +79,7 @@ Keep the single quotes: without them PowerShell reads `{owner}`/`{repo}` as scri
 | Kind | Examples | What to do |
 |---|---|---|
 | **Question** | facts, explanations, comparisons | Answer it accurately, name the source, and say when a figure is from memory rather than a live lookup. If the answer belongs in the repo ("document X", "write a guide"), also create the file. Then reply and close. |
-| **Small change** | create or edit files, docs, config, a bug fix, a rename, a project skeleton with no features | Do it with no plan/approval step, but still on a ticket branch: run the relevant checks, commit, push and open a PR. Reply with a `factory:review` comment linking it. Leave the ticket open; the merge closes it. |
+| **Small change** | create or edit files, docs, config, a bug fix, a rename, a project skeleton with no features | Do it with no plan/approval step, but still on a ticket branch. Bug fixes start with a failing test. Pass the quality gate, then commit, push and open a PR. Reply with a `factory:review` comment linking it. Leave the ticket open; the merge closes it. |
 | **Build** | a new project or app, or a new user-facing feature in an existing project | Follow the **Build flow** below. |
 | **Unclear** | missing the information needed to act | Ask specific questions **one at a time** (`factory:questions k/N`, as in **Clarify**) and leave the ticket open. |
 | **Destructive** | delete, wipe, force-push, remove history | Decline (`factory:declined`) with the reason. Leave the ticket open. |
@@ -105,8 +106,11 @@ After the reply, post the plan:
 - **Goal** and **scope**: what is in, and what is explicitly out.
 - **Location:** the project folder (new top-level folder, or the existing project).
 - **Files:** each file to add or change, with its purpose.
-- **Design:** data model, UI or behaviour, and key decisions.
+- **Design:** data model, UI or behaviour, and key decisions. Include a module breakdown: one responsibility per file, and code files at most 200 lines.
+- **Security:** data handled, trust boundaries, and input handling, plus a 3–5 item **threat model** with mitigations (engineering-standards §1).
 - **Acceptance checks:** numbered and observable in the browser. These drive verification.
+- **Test plan:** the automated test(s) behind each acceptance check, and the test file names.
+- **Size:** estimated changed lines. Above about 400 lines or about 10 files, propose splitting it into smaller tickets or PRs.
 - End with: "Reply **approved** to start, or comment changes." and the marker.
 
 Leave the ticket open. Don't build until there is an approval.
@@ -116,7 +120,9 @@ Leave the ticket open. Don't build until there is an approval.
 - Create or switch to the ticket branch first (see **Branches and pull requests**).
 - Work only in the planned folder(s), plus the `CLAUDE.md` index row and the project README.
 - Keep to the approved plan. If it has to change, note the change for the report. If the change is significant, post a revised plan and wait again.
-- Run any available checks (lint, `node --check`, tests).
+- **Build test-first** (engineering-standards §2), one behaviour at a time: write a test, see it fail, write the minimum code to pass, then refactor while it stays green. Never weaken or skip a test to get green.
+- Keep files within the design limits (§3). If a file you touch is over the limit, split it by responsibility as part of this change.
+- Run the quality gate: `node .claude/tools/quality-gate.js --base main`. Fix every ❌ before moving on.
 
 ### 4. Verify in the browser (chrome-devtools MCP)
 
@@ -130,15 +136,20 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
 
 ### 5. Commit, push, open the PR (stage `review`)
 
-1. On the ticket branch, commit the project, screenshots and `CLAUDE.md` together as `Ticket #<N>: <summary>`, then push the branch.
-2. Get the repo name and SHA: `gh repo view --json nameWithOwner -q .nameWithOwner` and `git rev-parse HEAD`.
-3. Open the PR (see **Branches and pull requests**). Its body holds the report:
+1. Re-run the quality gate (`node .claude/tools/quality-gate.js --base main`). **No PR while any check is ❌.** Then self-review the diff against the engineering-standards §5 checklist and fix what it finds.
+2. On the ticket branch, commit the project, tests, screenshots and `CLAUDE.md` together as `Ticket #<N>: <summary>`, then push the branch.
+3. Get the repo name and SHA: `gh repo view --json nameWithOwner -q .nameWithOwner` and `git rev-parse HEAD`.
+4. Open the PR (see **Branches and pull requests**). Fill in every section of `.github/pull_request_template.md`:
    - what was built and where
-   - the acceptance checks, each ✅/❌, with how each was verified
+   - the acceptance checks, each ✅/❌, with how each was verified (unit test and/or browser)
+   - the TDD evidence and the test command result
+   - the security notes and threat model
+   - the **quality gate table**, with any ⚠️ explained
    - the screenshots, embedded as `![<what>](https://github.com/<owner>/<repo>/blob/<sha>/<path>?raw=true)`
-   - the files touched, and any assumptions or plan changes
+   - risks and rollback
    - `Closes #<N>`
-4. Reply on the ticket with **Ready for review:** and the PR link, plus a one-line summary, ending with `<!-- factory:review -->`. **Don't close the ticket.** Merging the PR closes it.
+   CI re-runs the gate with gitleaks and osv-scanner. If CI fails, fix it on the branch before asking for review.
+5. Reply on the ticket with **Ready for review:** and the PR link, plus a one-line summary, ending with `<!-- factory:review -->`. **Don't close the ticket.** Merging the PR closes it.
 
 ## Branches and pull requests
 

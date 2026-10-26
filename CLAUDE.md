@@ -31,7 +31,10 @@ Rules that follow from this:
   Deny rules in `.claude/settings.json` enforce this.
 - Ticket work goes on a `ticket-<N>-<slug>` branch and lands as a **PR** for the owner to review.
   It is **never merged without the owner's explicit go-ahead**, and `gh pr merge` always prompts.
-- The Stop hook logs prompts to `.claude/prompts.jsonl`, then commits and pushes the current branch.
+- All code follows the `engineering-standards` skill: a security section and threat model in each plan,
+  TDD, no god objects (code files ≤ 200 lines), and small PRs. `quality-gate.js` must pass before a PR, and CI re-runs it.
+- The Stop hook logs prompts to `.claude/prompts.jsonl`, holds back files that look like secrets,
+  then commits and pushes the current branch.
 
 ## Repo layout
 
@@ -41,8 +44,11 @@ README.md                 # workshop info and scoring
 .claude/skills/           # factory skills (the loop itself)
 .claude/hooks/            # Stop hook: prompt log + auto-commit/push
 .claude/tools/serve.js    # static server used for browser verification
+.claude/tools/quality-gate.js  # tests, size limits, secret + dependency scans (run before a PR)
+.github/                  # PR template + CI workflow running the quality gate
 <name>/                   # one top-level folder per project
   README.md               # layer-2 entry point for that project
+  tests/                  # node --test unit tests (TDD)
   screenshots/            # verification screenshots, ticket-<N>-*.png
 ```
 
