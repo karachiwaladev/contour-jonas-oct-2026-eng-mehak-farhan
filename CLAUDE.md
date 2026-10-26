@@ -23,10 +23,14 @@ Rules that follow from this:
 
 - Tickets arrive as GitHub issues titled `Ticket ...`.
 - The loop lives in the skill `.claude/skills/factory-loop/SKILL.md` (run it with `/factory-loop`).
-- For each ticket: read it with all comments, react 👀, do the work, reply, then close it.
-- Ambiguous tickets get a clarifying comment and stay open. Never guess.
-- Code changes are committed as `Ticket #<N>: <summary>` and pushed to `main`.
-  Only what is on GitHub counts.
+- The loop acts, not just answers. Questions get answered. Small changes are made directly.
+  Build work (a new project or feature) goes **clarify → plan → approval → build → browser
+  verify** (chrome-devtools MCP), and the report includes screenshots.
+- Ticket state is tracked by hidden `<!-- factory:<stage> -->` markers on the factory's comments.
+- **Never destructive:** no force-push, hard reset, clean, or deleting files, issues or repos.
+  Deny rules in `.claude/settings.json` enforce this.
+- The Stop hook logs prompts to `.claude/prompts.jsonl`, then commits and pushes everything.
+  Ticket work is also committed explicitly as `Ticket #<N>: <summary>`.
 
 ## Repo layout
 
@@ -34,8 +38,11 @@ Rules that follow from this:
 CLAUDE.md                 # this index (under 100 lines)
 README.md                 # workshop info and scoring
 .claude/skills/           # factory skills (the loop itself)
+.claude/hooks/            # Stop hook: prompt log + auto-commit/push
+.claude/tools/serve.js    # static server used for browser verification
 <name>/                   # one top-level folder per project
   README.md               # layer-2 entry point for that project
+  screenshots/            # verification screenshots, ticket-<N>-*.png
 ```
 
 ## Adding a project

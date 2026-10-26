@@ -1,2 +1,7 @@
 .claude/scheduled_tasks.lock
 .claude/prompts.state.json
+.env
+.env.*
+*.pem
+*.key
+node_modules/
