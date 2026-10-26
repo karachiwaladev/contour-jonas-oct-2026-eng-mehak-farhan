@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Regression tests for the todo app's existing behaviour (create, done, delete, due dates, tags, filters, persistence).
+     Run: node .claude/tools/browser-test.js todo/tests/browser/app.test.html -->
+<html><head><meta charset="utf-8"><title>todo app browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+const titles = () => T.$$('.task label').map((l) => l.textContent);
+const taskEl = (title) => T.$$('.task').find((li) => li.querySelector('label').textContent === title);
+const pad = (n) => String(n).padStart(2, '0');
+const local = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const day = (offset, h, m) => { const d = new Date(); d.setDate(d.getDate() + offset); d.setHours(h, m, 0, 0); return local(d); };
+async function add(title, due = '', tags = '') {
+  T.fill('#task-title', title);
+  T.fill('#task-due', due);
+  T.fill('#task-tags', tags);
+  T.submit('#new-task');
+  await T.until(() => titles().includes(title), `"${title}" to appear`);
+}
+
+T.test('empty state on a fresh database', async () => {
+  await T.open('/todo/index.html');
+  await T.until(() => !T.$('#empty').hidden, 'empty state');
+  T.expect(T.$('#empty').textContent === 'No tasks yet. Add one above.', T.$('#empty').textContent);
+  T.expect(T.$('#tag-filter').hidden, 'tag filter hidden with no tags');
+});
+
+T.test('create: due label, normalized tag chips, form reset', async () => {
+  await add('Ship report', day(3, 10, 0), 'Work, work , Urgent');
+  const chips = [...taskEl('Ship report').querySelectorAll('.tag')].map((c) => c.textContent);
+  T.expect(JSON.stringify(chips) === '["work","urgent"]', `chips: ${chips}`);
+  T.expect(taskEl('Ship report').querySelector('.due'), 'due label shown');
+  T.expect(T.$('#task-title').value === '' && T.$('#task-tags').value === '', 'form reset');
+});
+
+T.test('overdue and today labels, sorted by due date with undated after', async () => {
+  await add('Pay bills', day(-1, 9, 0), 'home');
+  await add('Call mom', day(0, 23, 59), 'home, family');
+  await add('Read book');
+  T.expect(taskEl('Pay bills').querySelector('.due.overdue'), 'overdue styled');
+  T.expect(taskEl('Call mom').querySelector('.due.today'), 'today styled');
+  T.expect(JSON.stringify(titles()) === JSON.stringify(['Pay bills', 'Call mom', 'Ship report', 'Read book']), titles().join(' > '));
+});
+
+T.test('mark done moves the task last; status filter and counts', async () => {
+  T.check(`#${taskEl('Read book').querySelector('input').id}`);
+  await T.until(() => taskEl('Read book').classList.contains('done'), 'done');
+  T.expect(titles()[titles().length - 1] === 'Read book', 'done task last');
+  const count = (s) => T.$(`[data-count="${s}"]`).textContent;
+  T.expect(`${count('all')}/${count('open')}/${count('done')}` === '4/3/1', 'counts 4/3/1');
+  T.click('[data-status="done"]');
+  await T.until(() => titles().length === 1, 'completed filter');
+  T.click('[data-status="all"]');
+  await T.until(() => titles().length === 4, 'all filter');
+});
+
+T.test('multi-tag filter matches any tag; filters survive reload', async () => {
+  T.click('.tag-toggle[data-tag="family"]');
+  T.click('.tag-toggle[data-tag="work"]');
+  await T.until(() => titles().length === 2, 'family OR work');
+  await T.reload();
+  await T.until(() => titles().length === 2, 'filters restored after reload');
+  T.click('#clear-tags');
+  await T.until(() => titles().length === 4, 'clear tags');
+});
+
+T.test('delete removes the task; HTML in titles is shown as text', async () => {
+  T.click(`.task[data-id="${taskEl('Pay bills').dataset.id}"] .delete`);
+  await T.until(() => !titles().includes('Pay bills'), 'deleted');
+  T.expect(T.$('#status').textContent === 'Deleted "Pay bills"', T.$('#status').textContent);
+  await add('<img src=x onerror="window.pwned=1">');
+  T.expect(!T.win().pwned && !T.$('.task img'), 'title rendered as markup');
+});
+</script>
+</body></html>
