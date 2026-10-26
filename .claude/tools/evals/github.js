@@ -16,7 +16,7 @@ function getTicket(n) {
 }
 
 function ticketPRs(n) {
-  const fields = 'number,title,body,state,baseRefName,headRefName,headRefOid,mergeCommit,mergedAt,url';
+  const fields = 'number,title,body,state,baseRefName,headRefName,headRefOid,mergeCommit,mergedAt,url,isCrossRepository';
   return gh(['pr', 'list', '--state', 'all', '--limit', '200', '--json', fields])
     .filter((pr) => referencesTicket(pr, n))
     .sort((a, b) => a.number - b.number);

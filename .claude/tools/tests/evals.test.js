@@ -67,3 +67,49 @@ test('report: markdown scorecard lists every file and ends with the eval marker'
   assert.match(md, /todo\/db\.js/);
   assert.match(md, /<!-- factory:eval -->\s*$/);
 });
+
+const { isTrustedPR, safeEnv } = require('../evals/safety');
+const { locateCode, grade } = require('../evals/coverage-eval');
+
+test('safety: merged PRs into main are trusted (the owner already merged them)', () => {
+  assert.equal(isTrustedPR({ state: 'MERGED', baseRefName: 'main', isCrossRepository: true, headRefName: 'x' }, 6, 'main'), true);
+});
+
+test('safety: open PRs run only from this repo on a ticket-<N>- branch, never from forks', () => {
+  const pr = (over) => ({ state: 'OPEN', baseRefName: 'main', isCrossRepository: false, headRefName: 'ticket-6-recurring', ...over });
+  assert.equal(isTrustedPR(pr(), 6, 'main'), true);
+  assert.equal(isTrustedPR(pr({ isCrossRepository: true }), 6, 'main'), false); // fork
+  assert.equal(isTrustedPR(pr({ headRefName: 'feature-x' }), 6, 'main'), false); // wrong branch
+  assert.equal(isTrustedPR(pr({ headRefName: 'ticket-60-x' }), 6, 'main'), false); // other ticket
+  assert.equal(isTrustedPR(pr({ isCrossRepository: undefined }), 6, 'main'), false); // unknown origin: refuse
+  assert.equal(isTrustedPR(pr({ state: 'CLOSED' }), 6, 'main'), false);
+});
+
+test('safety: child processes get no tokens, secrets or keys', () => {
+  const env = safeEnv({ PATH: '/bin', BROWSER: 'chrome', FACTORY_ROOT: '/x', CI: 'true', GH_TOKEN: 't', GITHUB_TOKEN: 't',
+    ACTIONS_RUNTIME_TOKEN: 't', ACTIONS_ID_TOKEN_REQUEST_URL: 'u', NPM_TOKEN: 't', AWS_SECRET_ACCESS_KEY: 's', ANTHROPIC_API_KEY: 'k', DB_PASSWORD: 'p' });
+  assert.deepEqual(Object.keys(env).sort(), ['BROWSER', 'CI', 'FACTORY_ROOT', 'PATH']);
+});
+
+test('locateCode: merged PRs on main give base = parent of first merge, head = last merge', () => {
+  const prs = [
+    { number: 14, state: 'MERGED', baseRefName: 'main', mergeCommit: { oid: 'bbb' }, mergedAt: '2026-10-26T10:00:00Z' },
+    { number: 8, state: 'MERGED', baseRefName: 'main', mergeCommit: { oid: 'aaa' }, mergedAt: '2026-10-26T09:52:03Z' },
+    { number: 13, state: 'MERGED', baseRefName: 'ticket-6-refactor', mergeCommit: { oid: 'side' }, mergedAt: '2026-10-26T09:52:13Z' },
+  ];
+  assert.deepEqual(locateCode(prs, 'main', 6), { commits: ['aaa', 'bbb'], base: 'aaa^1', head: 'bbb' });
+});
+
+test('locateCode: an untrusted open PR (fork) is never checked out', () => {
+  const fork = { number: 99, state: 'OPEN', baseRefName: 'main', isCrossRepository: true, headRefName: 'ticket-6-evil', headRefOid: 'f00' };
+  assert.equal(locateCode([fork], 'main', 6), null);
+});
+
+test('grade: higher of unit/browser coverage per file; never loaded = FAIL', () => {
+  const rows = grade(['todo/a.js', 'todo/b.js', 'todo/c.js'],
+    { 'todo/a.js': { lines: 70, uncovered: '5-9' }, 'todo/b.js': { lines: 100, uncovered: '' } },
+    { 'todo/a.js': { lines: 92, uncovered: '12' } });
+  assert.deepEqual(rows.map((r) => [r.name, r.status]), [['todo/a.js', 'PASS'], ['todo/b.js', 'PASS'], ['todo/c.js', 'FAIL']]);
+  assert.match(rows[0].detail, /unit 70% · browser 92% \(uncovered lines: 12\)/);
+  assert.equal(rows[2].detail, 'not loaded by any test');
+});
