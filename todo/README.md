@@ -14,8 +14,18 @@ database (IndexedDB), so they persist across reloads with no server.
 - Overdue open tasks are highlighted in red, and tasks due today are labelled "Today"
 - Open tasks are sorted by due date (undated after), with completed tasks last
 - Selected filters are remembered across reloads (in `localStorage`)
+- **Recurring tasks:** choose Repeat (Daily, Weekly or Monthly) when adding a task. Ticking it done keeps it
+  as history and creates the next occurrence, with the same title, tags and repeat setting, due one period after
+  the previous due date (or one period from now if it had none). Missed periods are skipped so the next
+  one is never overdue. Monthly repeats keep the day of the month, clamped to shorter months (Jan 31 → Feb 28).
+  Unticking and re-ticking doesn't create duplicates, and deleting the open occurrence ends the series.
 
-Due date and tags are set when a task is created. Editing them later isn't supported yet.
+Due date, tags and repeat are set when a task is created. Editing them later isn't supported yet.
+
+## Tests
+
+- Unit tests: `cd todo && npm test` (uses Node 18+ automatically via `.claude/tools/run-tests.js`)
+- Browser tests: `node .claude/tools/browser-test.js todo/tests/browser/app.test.html todo/tests/browser/recurring.test.html`
 
 ## Run it
 
@@ -28,7 +38,11 @@ Serving the folder also works, e.g. `npx serve todo`.
 |---|---|
 | `index.html` | Page markup |
 | `db.js` | IndexedDB wrapper (`TaskDB.all/add/get/put/remove`) |
-| `app.js` | UI logic: render, add, toggle, delete, filters, sorting, due labels |
+| `app.js` | Event wiring: add, toggle (creates the next recurring occurrence), delete, filters |
+| `filters.js` | Pure logic: tag parsing, sorting, filtering, due labels, saved-filter loading |
+| `recurrence.js` | Pure logic: repeat patterns, next due date, next occurrence |
+| `render.js` | DOM building (`textContent` only) |
+| `tests/` | `node:test` unit tests, plus `tests/browser/` headless browser tests |
 | `screenshots/` | Browser verification screenshots, per ticket |
 | `style.css` | Styles, with light and dark themes |
 

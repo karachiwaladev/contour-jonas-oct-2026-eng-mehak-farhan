@@ -1,0 +1,84 @@
+<!doctype html>
+<!-- Recurring tasks (ticket #6) against the real page.
+     Run: node .claude/tools/browser-test.js todo/tests/browser/recurring.test.html -->
+<html><head><meta charset="utf-8"><title>recurring tasks browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+const tasks = (title) => T.$$('.task').filter((li) => li.querySelector('label').textContent === title);
+const open = (title) => tasks(title).filter((li) => !li.classList.contains('done'));
+const done = (title) => tasks(title).filter((li) => li.classList.contains('done'));
+const pad = (n) => String(n).padStart(2, '0');
+const local = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const day = (offset, h, m) => { const d = new Date(); d.setDate(d.getDate() + offset); d.setHours(h, m, 0, 0); return local(d); };
+async function add(title, { due = '', tags = '', repeat = 'none' } = {}) {
+  T.fill('#task-title', title);
+  T.fill('#task-due', due);
+  T.fill('#task-tags', tags);
+  T.$('#task-repeat').value = repeat;
+  T.submit('#new-task');
+  await T.until(() => tasks(title).length, `"${title}" to appear`);
+}
+function tick(li, on = true) {
+  const box = li.querySelector('input[type=checkbox]');
+  box.checked = on;
+  box.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+T.test('1. Repeat dropdown offers None/Daily/Weekly/Monthly; weekly task shows "↻ Weekly"', async () => {
+  await T.open('/todo/index.html');
+  await T.until(() => T.$('#task-repeat'), 'repeat dropdown');
+  const options = [...T.$('#task-repeat').options].map((o) => `${o.value}:${o.textContent}`);
+  T.expect(JSON.stringify(options) === '["none:None","daily:Daily","weekly:Weekly","monthly:Monthly"]', options.join(','));
+  await add('Team sync', { repeat: 'weekly', due: day(2, 10, 0) });
+  T.expect(tasks('Team sync')[0].querySelector('.repeat').textContent === '↻ Weekly', 'weekly label');
+});
+
+T.test('2. completing a daily task keeps it done and adds the next one (same title/tags), due tomorrow', async () => {
+  await add('Water plants', { repeat: 'daily', due: day(0, 23, 58), tags: 'home' });
+  tick(open('Water plants')[0]);
+  await T.until(() => done('Water plants').length === 1 && open('Water plants').length === 1, 'done + next occurrence');
+  const next = open('Water plants')[0];
+  T.expect(next.querySelector('.repeat').textContent === '↻ Daily', 'next keeps repeat');
+  T.expect([...next.querySelectorAll('.tag')].map((t) => t.textContent).join() === 'home', 'next keeps tags');
+  T.expect(!/^Today|^Overdue/.test(next.querySelector('.due').textContent), `next due: ${next.querySelector('.due').textContent}`);
+});
+
+T.test('5. unticking and re-ticking a completed recurring task does not create another copy', async () => {
+  tick(done('Water plants')[0], false);
+  await T.until(() => done('Water plants').length === 0, 'unticked');
+  tick(open('Water plants').find((li) => li.querySelector('.due').textContent.startsWith('Today')), true);
+  await T.until(() => done('Water plants').length === 1, 're-ticked');
+  T.expect(tasks('Water plants').length === 2, `copies: ${tasks('Water plants').length}`);
+});
+
+T.test('3. a weekly task due 3 weeks ago creates its next occurrence in the future, not overdue', async () => {
+  await add('Weekly report', { repeat: 'weekly', due: day(-21, 9, 0) });
+  tick(open('Weekly report')[0]);
+  await T.until(() => open('Weekly report').length === 1 && done('Weekly report').length === 1, 'next weekly');
+  const due = open('Weekly report')[0].querySelector('.due');
+  T.expect(!due.classList.contains('overdue'), `next is overdue: ${due.textContent}`);
+});
+
+T.test('6. a recurring task without a due date gets one period from now', async () => {
+  await add('Pay rent', { repeat: 'monthly' });
+  tick(open('Pay rent')[0]);
+  await T.until(() => open('Pay rent').length === 1 && done('Pay rent').length === 1, 'next monthly');
+  T.expect(open('Pay rent')[0].querySelector('.due'), 'next occurrence has a due date');
+});
+
+T.test('7. deleting the open occurrence ends the series', async () => {
+  open('Pay rent')[0].querySelector('.delete').click();
+  await T.until(() => open('Pay rent').length === 0, 'open occurrence deleted');
+  T.expect(tasks('Pay rent').length === 1, 'only the completed history remains');
+});
+
+T.test('9. everything survives a reload', async () => {
+  await T.reload();
+  await T.until(() => tasks('Water plants').length === 2, 'tasks after reload');
+  T.expect(tasks('Team sync')[0].querySelector('.repeat').textContent === '↻ Weekly', 'repeat label after reload');
+  T.expect(tasks('Pay rent').length === 1 && tasks('Weekly report').length === 2, 'series state after reload');
+});
+</script>
+</body></html>

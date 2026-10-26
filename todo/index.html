@@ -27,6 +27,15 @@
           <span>Tags</span>
           <input id="task-tags" name="tags" type="text" placeholder="work, urgent" maxlength="200">
         </label>
+        <label class="field">
+          <span>Repeat</span>
+          <select id="task-repeat" name="repeat">
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </label>
       </div>
     </form>
 
@@ -51,6 +60,7 @@
 
   <script src="db.js"></script>
   <script src="filters.js"></script>
+  <script src="recurrence.js"></script>
   <script src="render.js"></script>
   <script src="app.js"></script>
 </body>
