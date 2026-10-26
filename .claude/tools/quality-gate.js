@@ -68,7 +68,7 @@ function checkFileSize(files) {
     if (IGNORED.test(f) || TEST_FILE.test(f)) continue;
     const limit = CODE.test(f) ? LIMITS.code : MARKUP.test(f) ? LIMITS.markup : null;
     if (!limit) continue;
-    const n = fs.readFileSync(f, 'utf8').split('\n').length;
+    const text = fs.readFileSync(f, 'utf8'), n = text.split('\n').length - (text.endsWith('\n') ? 1 : 0);
     if (n > limit.warn) over.push({ f, n, fail: n > limit.fail });
   }
   const fails = over.filter((o) => o.fail);
