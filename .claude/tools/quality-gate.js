@@ -29,7 +29,9 @@ function git(...a) { return execFileSync('git', a, { encoding: 'utf8', stdio: ['
 function tryGit(...a) { try { return git(...a); } catch { return ''; } }
 function has(cmd) { return spawnSync(process.platform === 'win32' ? 'where' : 'which', [cmd], { stdio: 'ignore' }).status === 0; }
 function run(cmd, cmdArgs, cwd) {
-  const r = spawnSync(cmd, cmdArgs, { cwd, encoding: 'utf8', shell: process.platform === 'win32' });
+  // Windows needs a shell only for npm and .cmd shims; using one for real executables breaks paths with spaces.
+  const shell = process.platform === 'win32' && (cmd === 'npm' || /\.cmd$/i.test(cmd));
+  const r = spawnSync(cmd, cmdArgs, { cwd, encoding: 'utf8', shell });
   return { ok: r.status === 0, out: `${r.stdout || ''}${r.stderr || ''}`.trim() };
 }
 function lastLine(text) { return (text.split('\n').filter(Boolean).pop() || '').slice(0, 160); }
