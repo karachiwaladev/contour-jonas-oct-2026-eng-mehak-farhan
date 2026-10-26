@@ -21,7 +21,7 @@ Every comment the factory posts ends with a hidden marker naming its stage:
 
 | Marker | Posted when |
 |---|---|
-| `<!-- factory:questions -->` | Clarifying questions and assumptions (build work, or an unclear ticket) |
+| `<!-- factory:questions k/N -->` | One clarifying question, number k of N (build work, or an unclear ticket). Bare `factory:questions` on older comments means all questions were asked at once |
 | `<!-- factory:plan -->` | A plan awaiting approval |
 | `<!-- factory:building -->` | Approved work that is built and pushed but not yet browser-verified (e.g. chrome-devtools MCP unavailable) |
 | `<!-- factory:review -->` | Work is in an open PR, awaiting the owner's review and go-ahead to merge |
@@ -34,7 +34,8 @@ A **human reply** is any comment *without* a factory marker. Work out the ticket
 |---|---|---|
 | none | – | **New** → acknowledge and classify (step b) |
 | `questions` | no | **Waiting**. Skip silently: no new comment, no reaction |
-| `questions` | yes | **Answered**. Write the plan, or ask follow-ups if it's still unclear |
+| `questions k/N`, k < N | yes | **Next question**. Ask question k+1 (see **Clarify**), unless the reply says to accept all remaining defaults |
+| `questions N/N` (or bare `questions`) | yes | **Answered**. Write the plan, or ask a follow-up (one question) if it's still unclear |
 | `plan` | no | **Waiting**. Skip silently |
 | `plan` | yes, approving | **Approved** → build, verify, report |
 | `plan` | yes, other feedback | **Revise**. Post an updated plan |
@@ -79,20 +80,24 @@ Keep the single quotes: without them PowerShell reads `{owner}`/`{repo}` as scri
 | **Question** | facts, explanations, comparisons | Answer it accurately, name the source, and say when a figure is from memory rather than a live lookup. If the answer belongs in the repo ("document X", "write a guide"), also create the file. Then reply and close. |
 | **Small change** | create or edit files, docs, config, a bug fix, a rename, a project skeleton with no features | Do it with no plan/approval step, but still on a ticket branch: run the relevant checks, commit, push and open a PR. Reply with a `factory:review` comment linking it. Leave the ticket open; the merge closes it. |
 | **Build** | a new project or app, or a new user-facing feature in an existing project | Follow the **Build flow** below. |
-| **Unclear** | missing the information needed to act | Post specific questions (`factory:questions`) and leave the ticket open. |
+| **Unclear** | missing the information needed to act | Ask specific questions **one at a time** (`factory:questions k/N`, as in **Clarify**) and leave the ticket open. |
 | **Destructive** | delete, wipe, force-push, remove history | Decline (`factory:declined`) with the reason. Leave the ticket open. |
 
 ## Build flow
 
 ### 1. Clarify (stage `questions`)
 
-Before writing any code, post one comment:
+**Ask questions one at a time: one question per comment, then wait for the reply.** The owner asked for this. Never batch questions in one comment.
+
+Before writing any code, list the questions privately: specific ones only, whose answers change what gets built, each with a default. Then post the **first** comment:
 - **Understanding:** the request restated in one or two lines.
 - **Assumptions:** each with the default you'll use, e.g. "Storage: IndexedDB in the browser. No server."
-- **Questions:** numbered, specific, and only ones whose answers change what gets built.
-- End with: "Reply with answers, or **ok** to accept the defaults." and the marker.
+- **Question 1 of N:** a single question, with its default stated ("Default: ...").
+- End with: "Reply with your answer, **ok** for the default, or **ok to all** to accept every remaining default." and the marker `<!-- factory:questions 1/N -->`.
 
-Leave the ticket open and move on.
+After each reply, post the next comment with just a one-line note of the answer recorded and **Question k of N**, ending with `<!-- factory:questions k/N -->`. Drop or reword later questions that an earlier answer has made moot, and adjust N. After the last answer (or **ok to all**), go to **Plan**.
+
+Leave the ticket open and move on while waiting.
 
 ### 2. Plan (stage `plan`)
 
