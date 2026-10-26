@@ -1,0 +1,50 @@
+{
+  "eval": "merge-risk",
+  "ticket": 16,
+  "score": 86,
+  "passed": 6,
+  "total": 7,
+  "prs": [
+    18
+  ],
+  "head": "ce7c813f47936db5f16396b628744565f063b5c9",
+  "level": "Low",
+  "cases": [
+    {
+      "id": "small-diff",
+      "pass": true,
+      "detail": "239 source lines changed (safe ≤ 400)"
+    },
+    {
+      "id": "few-files",
+      "pass": true,
+      "detail": "10 source files touched (safe ≤ 10)"
+    },
+    {
+      "id": "few-modules",
+      "pass": true,
+      "detail": "2 module(s): .claude, todo (safe ≤ 2)"
+    },
+    {
+      "id": "no-sensitive-areas",
+      "pass": false,
+      "detail": "touches storage/persistence"
+    },
+    {
+      "id": "test-ratio",
+      "pass": true,
+      "detail": "test-to-source line ratio 1.05 (safe ≥ 0.60)"
+    },
+    {
+      "id": "no-high-sast-findings",
+      "pass": true,
+      "detail": "0 high-severity SAST finding(s)"
+    },
+    {
+      "id": "no-dependency-changes",
+      "pass": true,
+      "detail": "no dependency changes"
+    }
+  ],
+  "generatedAt": "2026-10-26T17:46:12.433Z"
+}

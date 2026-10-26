@@ -121,6 +121,6 @@ function main() {
   return rows.some((r) => r.status === 'FAIL') ? 1 : 0;
 }
 
-module.exports = { locateCode, grade };
+module.exports = { locateCode, grade, changedSources, unitCoverage };
 
 if (require.main === module) process.exitCode = main();
