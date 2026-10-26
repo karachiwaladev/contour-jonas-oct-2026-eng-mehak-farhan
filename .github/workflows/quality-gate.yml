@@ -39,6 +39,11 @@ jobs:
             echo "No lockfiles, so skipping osv-scanner install."
           fi
 
+      - name: Install semgrep (SAST)
+        run: |
+          python3 -m pip install --quiet --user semgrep==1.85.0
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Install project dependencies
         run: |
           for pkg in $(git ls-files '*/package.json' | grep -v node_modules); do
@@ -58,3 +63,13 @@ jobs:
       - name: Publish gate summary
         if: always()
         run: '[ -f gate.md ] && cat gate.md >> "$GITHUB_STEP_SUMMARY" || true'
+
+      - name: Unit tests (all projects + factory tools)
+        run: node .claude/tools/run-tests.js
+
+      - name: Browser tests (headless Chrome)
+        env:
+          BROWSER: /usr/bin/google-chrome
+        run: |
+          node .claude/tools/browser-test.js
+          node .claude/tools/browser-test.js .claude/skills/testing/examples/todo-smoke.test.html

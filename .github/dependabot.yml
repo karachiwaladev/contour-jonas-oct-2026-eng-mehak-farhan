@@ -1,0 +1,9 @@
+# Dependabot opens PRs for outdated or vulnerable dependencies. Like every PR here, they wait for the owner's review.
+# When a project adds a package.json, add an npm entry for its folder (e.g. directory: "/todo").
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]

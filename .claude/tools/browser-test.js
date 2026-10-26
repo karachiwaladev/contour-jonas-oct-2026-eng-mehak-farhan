@@ -59,8 +59,9 @@ function runPage(browser, page) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-browser-'));
   // Private mode keeps IndexedDB/localStorage in memory: a clean slate per page, and no disk-backed store needed.
   const privateFlag = /msedge/i.test(browser) ? '--inprivate' : '--incognito';
-  const proc = spawn(browser, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    privateFlag, `--user-data-dir=${profile}`, `http://localhost:${port}/${page}`], { stdio: 'ignore' });
+  const flags = ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', privateFlag, `--user-data-dir=${profile}`];
+  if (process.env.CI && process.platform === 'linux') flags.push('--no-sandbox'); // CI containers lack the user namespaces Chrome's sandbox needs
+  const proc = spawn(browser, [...flags, `http://localhost:${port}/${page}`], { stdio: 'ignore' });
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve({ page, timeout: true, results: [] }), timeoutMs);
     pending = (data) => { clearTimeout(timer); resolve({ page, ...data }); };
