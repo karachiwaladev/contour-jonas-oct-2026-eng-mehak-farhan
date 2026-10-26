@@ -57,8 +57,9 @@ function browserCoverage(headDir, projects, notes) {
   const data = parseBrowserCoverage(r.stdout || '');
   if (!Object.keys(data).length) {
     const why = r.error ? r.error.message : `exit ${r.status}`;
-    const last = (`${r.stderr || ''}${r.stdout || ''}`.trim().split('\n').pop() || 'no output').slice(0, 160);
-    notes.push(`Browser coverage could not be measured (${why}: ${last}). Files only the browser loads show as not covered.`);
+    const out = `${r.stderr || ''}${r.stdout || ''}`.trim().split('\n');
+    const msg = (out.find((l) => /error|failed|timed out|not found/i.test(l) && !/^\s+at /.test(l)) || out[0] || 'no output').trim().slice(0, 160);
+    notes.push(`Browser coverage could not be measured (${why}: ${msg}). Files only the browser loads show as not covered.`);
   }
   return data;
 }
