@@ -50,6 +50,7 @@ function scanText(text, file) {
   const lines = text.split(/\r?\n/);
   lines.forEach((line, i) => {
     if (/sast-scan:\s*allow/.test(line)) return;
+    if (/^\s*(\/\/|\/\*|\*)/.test(line)) return; // comment lines describe code; they don't run it
     for (const r of LINE_RULES) {
       if (!r.files.test(file)) continue;
       if (r.re ? r.re.test(line) : r.test(line)) findings.push({ file, line: i + 1, rule: r.id, severity: r.severity, message: r.message });
