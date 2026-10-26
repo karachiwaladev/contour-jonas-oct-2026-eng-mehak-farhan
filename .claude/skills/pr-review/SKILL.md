@@ -26,7 +26,10 @@ gh pr checks <PR>
 node .claude/tools/quality-gate.js --base <baseRefName>
 node .claude/tools/run-tests.js
 node .claude/tools/browser-test.js          # when any <project>/tests/browser pages exist
+node .claude/tools/run-tests.js --coverage   # unit coverage
+node .claude/tools/browser-coverage.js       # browser coverage per file (fails below 80%)
 ```
+A file below 80% line coverage is a **major** finding, and below 90% a **minor** one, unless the PR explains why. List any uncovered error paths.
 Any ❌ is a **blocker**. Every ⚠️ needs a justification in the PR body, or it becomes a **minor** finding.
 
 ## 3. Review the diff

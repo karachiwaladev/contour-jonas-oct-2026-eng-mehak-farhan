@@ -16,6 +16,7 @@ Use this with the TDD rules in `engineering-standards` §2: write one test, see 
 | Run unit tests | `node .claude/tools/run-tests.js [<project>/tests]` (no argument runs every project's tests plus the factory's own) |
 | Run with coverage | `node .claude/tools/run-tests.js <project>/tests --coverage` |
 | Run browser tests | `node .claude/tools/browser-test.js [<page>.test.html]` (no argument runs every `<project>/tests/browser/*.test.html`) |
+| Browser coverage | `node .claude/tools/browser-coverage.js [--min 80] [--warn 90]`: line coverage per source file from the browser tests (V8 coverage over the DevTools protocol). Exits 1 if any file is below `--min` or a test fails |
 | Everything, as the PR gate sees it | `node .claude/tools/quality-gate.js --base main` |
 
 `new-test.js` never overwrites an existing file. `run-tests.js` picks the newest Node 18+ it can find (this machine's default `node` is v14). Set `FACTORY_NODE` to override.
@@ -54,7 +55,14 @@ Use these for behaviour that needs the DOM, IndexedDB/localStorage or reloads. T
 - Each run uses a fresh private browser profile, so storage starts empty.
 - A worked example against the todo app: `.claude/skills/testing/examples/todo-smoke.test.html`.
 
-## 4. Rules
+## 4. Coverage
+
+- **Targets:** at least **80% lines per file** (CI fails below this), and aim for **90%+**. Unit coverage (`run-tests.js --coverage`) measures the pure modules. Browser coverage measures everything the pages load.
+- **Coverage shows what never ran, not what's correct.** Use it to find untested paths, especially error handling: storage blocked, the database failing, network errors. Test those for real. For example, `todo/tests/browser/errors.test.html` makes IndexedDB fail with a genuine `VersionError`.
+- **Line coverage can't see unfired callbacks.** The line that assigns an error handler counts as covered even if the handler never runs. Say so in the PR when it matters.
+- **Never write tests just to raise the number.** Each test must check a behaviour.
+
+## 5. Rules
 
 - Never weaken, skip, `.only` or delete a test to get green. If a test is wrong, fix it deliberately and say why in the PR.
 - A new test that passes before the code exists isn't testing the new behaviour.

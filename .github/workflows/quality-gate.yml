@@ -69,8 +69,8 @@ jobs:
         if: always()
         run: '[ -f gate.md ] && cat gate.md >> "$GITHUB_STEP_SUMMARY" || true'
 
-      - name: Unit tests (all projects + factory tools)
-        run: node .claude/tools/run-tests.js
+      - name: Unit tests with coverage (all projects + factory tools)
+        run: node .claude/tools/run-tests.js --coverage
 
       - name: Browser tests (headless Chrome)
         env:
@@ -78,3 +78,8 @@ jobs:
         run: |
           node .claude/tools/browser-test.js
           node .claude/tools/browser-test.js .claude/skills/testing/examples/todo-smoke.test.html
+
+      - name: Browser coverage (fails below 80% per file)
+        env:
+          BROWSER: /usr/bin/google-chrome
+        run: node .claude/tools/browser-coverage.js --min 80 --warn 90 | tee -a "$GITHUB_STEP_SUMMARY"; exit ${PIPESTATUS[0]}

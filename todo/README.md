@@ -25,7 +25,9 @@ Due date, tags and repeat are set when a task is created. Editing them later isn
 ## Tests
 
 - Unit tests: `cd todo && npm test` (uses Node 18+ automatically via `.claude/tools/run-tests.js`)
-- Browser tests: `node .claude/tools/browser-test.js todo/tests/browser/app.test.html todo/tests/browser/recurring.test.html`
+- Browser tests: `node .claude/tools/browser-test.js` (app, recurring and error-path suites)
+- Coverage: `cd todo && npm run coverage` gives unit coverage, then browser line coverage per file (100% at last run)
+- Error paths are tested for real: `tests/browser/errors.test.html` makes IndexedDB fail and checks the user sees a message
 
 ## Run it
 
