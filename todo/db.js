@@ -1,7 +1,8 @@
 // Client-side task store backed by IndexedDB.
 // Each task: { id: number (auto), title: string, done: boolean, createdAt: number,
 //              due: "YYYY-MM-DDTHH:mm" (local time) | null, tags: string[],
-//              repeat: 'none' | 'daily' | 'weekly' | 'monthly', spawnedNext: boolean }
+//              repeat: 'none' | 'daily' | 'weekly' | 'monthly', spawnedNext: boolean,
+//              priority: 'high' | 'medium' | 'low' }
 // Records saved before due dates and tags existed lack those fields; normalize() fills them in.
 const TaskDB = (() => {
   const DB_NAME = 'todo-app';
@@ -35,12 +36,12 @@ const TaskDB = (() => {
   }
 
   // Older records lack later fields; fill defaults so callers always see the full shape.
-  const normalize = (task) => task && { due: null, tags: [], repeat: 'none', spawnedNext: false, ...task };
+  const normalize = (task) => task && { due: null, tags: [], repeat: 'none', spawnedNext: false, priority: 'medium', ...task };
 
   return {
     all: async () => (await run('readonly', (s) => s.getAll())).map(normalize),
-    add: ({ title, due = null, tags = [], repeat = 'none' }) =>
-      run('readwrite', (s) => s.add({ title, due, tags, repeat, spawnedNext: false, done: false, createdAt: Date.now() })),
+    add: ({ title, due = null, tags = [], repeat = 'none', priority = 'medium' }) =>
+      run('readwrite', (s) => s.add({ title, due, tags, repeat, priority, spawnedNext: false, done: false, createdAt: Date.now() })),
     get: async (id) => normalize(await run('readonly', (s) => s.get(id))),
     put: (task) => run('readwrite', (s) => s.put(task)),
     remove: (id) => run('readwrite', (s) => s.delete(id)),

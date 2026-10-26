@@ -179,3 +179,18 @@ button.link {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Priority badges (ticket #16) */
+.priority { padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.priority-high { background: var(--danger); color: #fff; }
+.priority-medium { background: var(--chip); color: var(--text); }
+.priority-low { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+
+/* Inline edit form */
+.task .edit { padding: 6px 10px; background: transparent; color: var(--accent); border: 1px solid var(--border); }
+.edit-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
+.edit-form .edit-title { flex: 1 1 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; }
+.edit-form input, .edit-form select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; }
+.edit-form .cancel { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.edit-error { flex-basis: 100%; margin: 0; color: var(--danger); font-size: 13px; min-height: 0; }
+.edit-error:empty { display: none; }
