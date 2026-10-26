@@ -104,6 +104,17 @@ button:focus-visible, input:focus-visible {
 
 .due.today { color: var(--accent); font-weight: 600; }
 
+.repeat { color: var(--accent); }
+
+.field select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+}
+
 .tag {
   padding: 1px 8px;
   border-radius: 999px;

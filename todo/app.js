@@ -1,8 +1,9 @@
-// Wires the todo page together: events -> TaskDB (db.js) -> Filters (filters.js) -> Render (render.js).
+// Wires the todo page together: events -> TaskDB (db.js) -> Filters / Recurrence -> Render (render.js).
 const form = document.getElementById('new-task');
 const input = document.getElementById('task-title');
 const dueInput = document.getElementById('task-due');
 const tagsInput = document.getElementById('task-tags');
+const repeatInput = document.getElementById('task-repeat');
 const list = document.getElementById('task-list');
 const empty = document.getElementById('empty');
 const status = document.getElementById('status');
@@ -54,22 +55,42 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const title = input.value.trim();
   if (!title) return;
-  await TaskDB.add({ title, due: dueInput.value || null, tags: Filters.parseTags(tagsInput.value) });
+  await TaskDB.add({
+    title,
+    due: dueInput.value || null,
+    tags: Filters.parseTags(tagsInput.value),
+    repeat: Recurrence.normalizeRepeat(repeatInput.value),
+  });
   form.reset();
   input.focus();
   announce(`Added "${title}"`);
   await refresh();
 });
 
-list.addEventListener('change', async (e) => {
+// Toggles run one at a time: each read-modify-write finishes before the next starts, so a fast
+// tick/untick can't read a stale task and wipe spawnedNext (which would allow duplicate occurrences).
+let toggleQueue = Promise.resolve();
+list.addEventListener('change', (e) => {
   if (e.target.dataset.action !== 'toggle') return;
-  const task = await TaskDB.get(Number(e.target.closest('.task').dataset.id));
-  if (!task) return;
-  task.done = e.target.checked;
-  await TaskDB.put(task);
-  announce(`Marked "${task.title}" ${task.done ? 'done' : 'not done'}`);
-  await refresh();
+  const id = Number(e.target.closest('.task').dataset.id);
+  const checked = e.target.checked; // capture now; the checkbox may change again before this runs
+  toggleQueue = toggleQueue.then(() => toggleTask(id, checked)).catch((err) => announce('Could not update the task: ' + err.message));
 });
+
+async function toggleTask(id, checked) {
+  const task = await TaskDB.get(id);
+  if (!task) return;
+  task.done = checked;
+  // Completing a recurring task creates exactly one next occurrence; spawnedNext stops re-ticks making copies.
+  const next = Recurrence.nextOccurrence(task);
+  if (next) {
+    await TaskDB.add(next);
+    task.spawnedNext = true;
+  }
+  await TaskDB.put(task);
+  announce(`Marked "${task.title}" ${task.done ? 'done' : 'not done'}${next ? '. Next one added.' : ''}`);
+  await refresh();
+}
 
 list.addEventListener('click', async (e) => {
   if (e.target.dataset.action !== 'delete') return;

@@ -1,5 +1,5 @@
 // DOM building for the todo app. User content is only ever set via textContent (never innerHTML).
-// Depends on the `Filters` global (filters.js) for due labels and the tag list.
+// Depends on the `Filters` (filters.js) and `Recurrence` (recurrence.js) globals for labels and the tag list.
 const Render = (() => {
   function el(tag, props = {}) {
     const node = document.createElement(tag);
@@ -15,9 +15,11 @@ const Render = (() => {
 
   function metaFor(task, now) {
     const info = Filters.dueInfo(task, now);
-    if (!info && !task.tags.length) return null;
+    const repeat = Recurrence.repeatLabel(task.repeat);
+    if (!info && !repeat && !task.tags.length) return null;
     const meta = el('div', { className: 'meta' });
     if (info) meta.append(el('span', { className: 'due' + (info.state ? ` ${info.state}` : ''), textContent: info.text }));
+    if (repeat) meta.append(el('span', { className: 'repeat', textContent: repeat }));
     for (const tag of task.tags) meta.append(el('span', { className: 'tag', textContent: tag }));
     return meta;
   }
