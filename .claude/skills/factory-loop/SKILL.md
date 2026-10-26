@@ -22,6 +22,7 @@ Every comment the factory posts ends with a hidden marker naming its stage:
 |---|---|
 | `<!-- factory:questions -->` | Clarifying questions and assumptions (build work, or an unclear ticket) |
 | `<!-- factory:plan -->` | A plan awaiting approval |
+| `<!-- factory:building -->` | Approved work that is built and pushed but not yet browser-verified (e.g. chrome-devtools MCP unavailable) |
 | `<!-- factory:done -->` | The final answer or report |
 | `<!-- factory:declined -->` | A refusal of destructive or out-of-rules work |
 
@@ -35,6 +36,7 @@ A **human reply** is any comment *without* a factory marker. Work out the ticket
 | `plan` | no | **Waiting**. Skip silently |
 | `plan` | yes, approving | **Approved** → build, verify, report |
 | `plan` | yes, other feedback | **Revise**. Post an updated plan |
+| `building` | – | **Verify pending**. If the chrome-devtools tools are available, resume at Build flow step 4 (don't rebuild). If not, skip silently |
 | `done` / `declined` | yes | **Reopened conversation**. Treat the reply as a follow-up request |
 
 An approval is a human reply that clearly says yes: "approved", "approve", "lgtm", "go ahead", "ship it", "yes". If it approves *with* changes, fold the changes into the build and list them in the report.
@@ -115,7 +117,7 @@ Leave the ticket open. Don't build until there is an approval.
 4. Take a screenshot per key state with the screenshot tool, saving to `<project>/screenshots/ticket-<N>-<nn>-<what>.png` (for example `ticket-4-01-empty.png` or `ticket-4-02-added.png`).
 5. Stop the server when done.
 
-If the chrome-devtools tools are unavailable, say so plainly in the report. A headless fallback is allowed, but label it as such and never claim browser verification that didn't happen. Don't close the ticket without verification. Leave it open with a note asking for the MCP server to be enabled.
+If the chrome-devtools tools are unavailable, don't close the ticket. Commit and push the build as `Ticket #<N>: ...`, then post a `factory:building` comment. It should give the SHA, the results of any headless fallback checks (clearly labelled as headless, not browser-verified), and a note that browser verification and screenshots will follow once the MCP server is connected. Never claim browser verification that didn't happen.
 
 ### 5. Commit, push, report (stage `done`)
 
@@ -139,4 +141,4 @@ End the run with one row per ticket you touched (waiting tickets that were skipp
 | Ticket | Title | Outcome | Comment link |
 |---|---|---|---|
 
-Outcome is one of **Closed**, **Questions posted**, **Plan posted**, **Plan revised**, **Declined**, **Blocked (reason)** or **Skipped (already closed)**. List any commits pushed.
+Outcome is one of **Closed**, **Questions posted**, **Plan posted**, **Plan revised**, **Built, awaiting verification**, **Declined**, **Blocked (reason)** or **Skipped (already closed)**. List any commits pushed.
