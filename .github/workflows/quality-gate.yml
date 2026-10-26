@@ -1,0 +1,80 @@
+name: Quality gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the diff base and the gitleaks history scan
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Gitleaks CLI binary (the gitleaks GitHub Action needs a paid license for organization repos).
+      - name: Install gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Install osv-scanner (only when lockfiles exist)
+        run: |
+          if git ls-files | grep -Eq '(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|requirements\.txt|poetry\.lock|go\.sum|Cargo\.lock)$'; then
+            curl -sSfL -o /usr/local/bin/osv-scanner \
+              https://github.com/google/osv-scanner/releases/download/v1.9.2/osv-scanner_linux_amd64
+            chmod +x /usr/local/bin/osv-scanner
+            osv-scanner --version
+          else
+            echo "No lockfiles, so skipping osv-scanner install."
+          fi
+
+      # semgrep 1.85 crashes on Python 3.12+ (protobuf metaclass error), so pin a supported Python.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install semgrep (SAST)
+        run: |
+          python -m pip install --quiet semgrep==1.85.0
+          semgrep --version
+
+      - name: Install project dependencies
+        run: |
+          for pkg in $(git ls-files '*/package.json' | grep -v node_modules); do
+            dir=$(dirname "$pkg")
+            if [ -f "$dir/package-lock.json" ]; then (cd "$dir" && npm ci); fi
+          done
+
+      - name: Run quality gate
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            node .claude/tools/quality-gate.js --base "origin/${{ github.base_ref }}" | tee gate.md
+          else
+            node .claude/tools/quality-gate.js --all | tee gate.md
+          fi
+          exit ${PIPESTATUS[0]}
+
+      - name: Publish gate summary
+        if: always()
+        run: '[ -f gate.md ] && cat gate.md >> "$GITHUB_STEP_SUMMARY" || true'
+
+      - name: Unit tests (all projects + factory tools)
+        run: node .claude/tools/run-tests.js
+
+      - name: Browser tests (headless Chrome)
+        env:
+          BROWSER: /usr/bin/google-chrome
+        run: |
+          node .claude/tools/browser-test.js
+          node .claude/tools/browser-test.js .claude/skills/testing/examples/todo-smoke.test.html

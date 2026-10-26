@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- Example browser test against the real todo app.
+     Run: node .claude/tools/browser-test.js .claude/skills/testing/examples/todo-smoke.test.html -->
+<html><head><meta charset="utf-8"><title>todo smoke test</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+const titles = () => T.$$('.task label').map((l) => l.textContent);
+async function add(title, due = '', tags = '') {
+  T.fill('#task-title', title);
+  T.fill('#task-due', due);
+  T.fill('#task-tags', tags);
+  T.submit('#new-task');
+  await T.until(() => titles().includes(title), `"${title}" to appear`);
+}
+
+T.test('starts empty', async () => {
+  await T.open('/todo/index.html');
+  await T.until(() => !T.$('#empty').hidden, 'empty state');
+  T.expect(T.$('#empty').textContent.includes('No tasks yet'), 'shows empty message');
+});
+
+T.test('adds a task with normalized tags', async () => {
+  await add('Write tests', '', 'QA, qa , Urgent');
+  const chips = T.$$('.task .tag').map((c) => c.textContent);
+  T.expect(JSON.stringify(chips) === '["qa","urgent"]', `tags were ${chips}`);
+});
+
+T.test('marks a task done and filters it', async () => {
+  T.check('.task input[type=checkbox]');
+  await T.until(() => T.$('.task.done'), 'task to be done');
+  T.click('[data-status="open"]');
+  await T.until(() => titles().length === 0, 'incomplete filter to hide it');
+  T.click('[data-status="all"]');
+  await T.until(() => titles().length === 1, 'all filter to show it');
+});
+
+T.test('task and filters survive a reload', async () => {
+  T.click('.tag-toggle[data-tag="qa"]');
+  await T.reload();
+  await T.until(() => titles().length === 1, 'task after reload');
+  T.expect(T.$('.tag-toggle[data-tag="qa"]').getAttribute('aria-pressed') === 'true', 'tag filter remembered');
+});
+
+T.test('renders HTML in titles as text', async () => {
+  T.click('#clear-tags'); // the previous test left the "qa" filter on, which would hide an untagged task
+  await T.until(() => T.$('#clear-tags').hidden, 'tag filter to clear');
+  await add('<img src=x onerror="window.pwned=1">');
+  T.expect(!T.win().pwned && !T.$('.task img'), 'title was rendered as markup');
+});
+</script>
+</body></html>

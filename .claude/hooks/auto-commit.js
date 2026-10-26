@@ -4,6 +4,7 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { scanFiles } = require('../tools/secret-scan');
 
 const cwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -26,7 +27,9 @@ function main() {
   if (git('status', '--porcelain')) {
     git('add', '-A');
     const staged = git('diff', '--cached', '--name-only').split('\n').filter(Boolean);
-    const secrets = staged.filter((f) => SECRET_PATTERNS.some((re) => re.test(f)));
+    // Hold back secret-looking file names, and any file whose contents match a secret pattern.
+    const byContent = new Set(scanFiles(staged.map((f) => path.join(cwd, f))).map((x) => path.relative(cwd, x.file).split(path.sep).join('/')));
+    const secrets = staged.filter((f) => SECRET_PATTERNS.some((re) => re.test(f)) || byContent.has(f));
     // Unstaging only touches the index; the files stay on disk untouched.
     if (secrets.length) git('reset', '-q', '--', ...secrets);
     const toCommit = staged.filter((f) => !secrets.includes(f));

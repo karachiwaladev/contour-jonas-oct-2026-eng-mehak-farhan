@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- Browser tests for __PROJECT__ (__NAME__). Run: node .claude/tools/browser-test.js __PROJECT__/tests/browser/__NAME__.test.html -->
+<html><head><meta charset="utf-8"><title>__NAME__ browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+
+T.test('page loads without errors', async () => {
+  await T.open('/__PROJECT__/index.html');
+  await T.until(() => T.$('body'), 'app to render');
+});
+
+T.test('describe one user-visible behaviour', async () => {
+  // T.fill('#some-input', 'value');
+  // T.submit('#some-form');
+  // await T.until(() => T.$$('.item').length === 1, 'item to appear');
+  // T.expect(T.$('.item').textContent === 'value', 'item shows the entered value');
+});
+
+T.test('state survives a reload', async () => {
+  // await T.reload();
+  // await T.until(() => T.$$('.item').length === 1, 'item after reload');
+});
+</script>
+</body></html>
