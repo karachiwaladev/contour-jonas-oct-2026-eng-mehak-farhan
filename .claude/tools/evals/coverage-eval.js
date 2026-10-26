@@ -49,12 +49,18 @@ function unitCoverage(headDir, projects) {
   return parseUnitCoverage(`${r.stdout}${r.stderr}`);
 }
 
-function browserCoverage(headDir, projects) {
+function browserCoverage(headDir, projects, notes) {
   const hasPages = projects.some((p) => fs.existsSync(path.join(headDir, p, 'tests', 'browser')));
   if (UNIT_ONLY || !hasPages) return {};
   const tool = path.join(wt.root, '.claude', 'tools', 'browser-coverage.js');
   const r = spawnSync(process.execPath, [tool, '--min', '0'], { env: { ...process.env, FACTORY_ROOT: headDir }, encoding: 'utf8', timeout: 300000 });
-  return parseBrowserCoverage(r.stdout || '');
+  const data = parseBrowserCoverage(r.stdout || '');
+  if (!Object.keys(data).length) {
+    const why = r.error ? r.error.message : `exit ${r.status}`;
+    const last = (`${r.stderr || ''}${r.stdout || ''}`.trim().split('\n').pop() || 'no output').slice(0, 160);
+    notes.push(`Browser coverage could not be measured (${why}: ${last}). Files only the browser loads show as not covered.`);
+  }
+  return data;
 }
 
 function grade(sources, unit, browser) {
@@ -85,7 +91,7 @@ function main() {
       const sources = changedSources(code, headDir);
       const projects = [...new Set(sources.map((s) => s.split('/')[0]))];
       if (!sources.length) notes.push('The ticket changed no project source files.');
-      else rows = grade(sources, unitCoverage(headDir, projects), browserCoverage(headDir, projects));
+      else rows = grade(sources, unitCoverage(headDir, projects), browserCoverage(headDir, projects, notes));
       if (UNIT_ONLY) notes.push('Browser coverage skipped (--unit-only).');
       notes.push('Per file, the higher of unit and browser line coverage is graded.');
     }
