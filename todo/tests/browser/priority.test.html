@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- Task priority (ticket #16): add, badge, legacy default, sorting, filter, persistence, recurring carry-over.
+     Run: node .claude/tools/browser-test.js todo/tests/browser/priority.test.html -->
+<html><head><meta charset="utf-8"><title>priority browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+const titles = () => T.$$('.task label').map((l) => l.textContent);
+const row = (title) => T.$$('.task').find((li) => li.querySelector('label').textContent === title);
+const badge = (title) => row(title).querySelector('.priority');
+async function add(title, { priority = 'medium', due = '', repeat = 'none', tags = '' } = {}) {
+  T.fill('#task-title', title); T.fill('#task-due', due); T.fill('#task-tags', tags);
+  T.$('#task-repeat').value = repeat;
+  T.$('#task-priority').value = priority;
+  T.submit('#new-task');
+  await T.until(() => titles().includes(title), `"${title}" to appear`);
+}
+// An old record saved before priorities existed, written straight into the app's database.
+function seedLegacy() {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open('todo-app', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('tasks', { keyPath: 'id', autoIncrement: true });
+    r.onsuccess = () => { const tx = r.result.transaction('tasks', 'readwrite');
+      tx.objectStore('tasks').add({ title: 'Legacy task', done: false, createdAt: 1, due: null, tags: [] });
+      tx.oncomplete = () => { r.result.close(); resolve(); }; tx.onerror = () => reject(tx.error); };
+    r.onerror = () => reject(r.error);
+  });
+}
+
+T.test('1. add form has a Priority dropdown (High/Medium/Low, default Medium); new task shows its badge', async () => {
+  await seedLegacy();
+  await T.open('/todo/index.html');
+  await T.until(() => T.$('#task-priority'), 'priority dropdown');
+  const opts = [...T.$('#task-priority').options].map((o) => `${o.value}:${o.textContent}`);
+  T.expect(JSON.stringify(opts) === '["high:High","medium:Medium","low:Low"]', opts.join(','));
+  T.expect(T.$('#task-priority').value === 'medium', 'default is Medium');
+  await add('Fix outage', { priority: 'high' });
+  T.expect(badge('Fix outage').textContent === 'High' && badge('Fix outage').classList.contains('priority-high'), 'High badge');
+  T.expect(T.$('#task-priority').value === 'medium', 'form resets to Medium');
+});
+
+T.test('2. a task saved before priorities existed displays as Medium', async () => {
+  await T.until(() => row('Legacy task'), 'legacy task');
+  T.expect(badge('Legacy task').textContent === 'Medium', `legacy badge: ${badge('Legacy task').textContent}`);
+});
+
+T.test('3. open tasks sort High, Medium, Low, then by due date; completed last', async () => {
+  const d = (n) => { const x = new Date(); x.setDate(x.getDate() + n); x.setHours(9, 0, 0, 0); return x.toISOString().slice(0, 10) + 'T09:00'; };
+  await add('Low soon', { priority: 'low', due: d(1) });
+  await add('Medium later', { priority: 'medium', due: d(9) });
+  await add('Medium sooner', { priority: 'medium', due: d(2) });
+  await add('Done high', { priority: 'high' });
+  T.check(`#${row('Done high').querySelector('input').id}`);
+  await T.until(() => row('Done high').classList.contains('done'), 'done');
+  T.expect(JSON.stringify(titles()) === JSON.stringify(['Fix outage', 'Medium sooner', 'Medium later', 'Legacy task', 'Low soon', 'Done high']), titles().join(' > '));
+});
+
+T.test('4. priority chips filter by ANY selected priority, combine with status, and survive reload', async () => {
+  T.click('.priority-toggle[data-priority="high"]');
+  T.click('.priority-toggle[data-priority="low"]');
+  await T.until(() => titles().length === 3, 'high or low');
+  T.expect(JSON.stringify(titles()) === '["Fix outage","Low soon","Done high"]', titles().join(','));
+  T.click('[data-status="open"]');
+  await T.until(() => titles().length === 2, 'combined with Incomplete');
+  await T.reload();
+  await T.until(() => titles().length === 2, 'filters restored after reload');
+  T.expect(T.$('.priority-toggle[data-priority="high"]').getAttribute('aria-pressed') === 'true', 'High chip remembered');
+  T.click('.priority-toggle[data-priority="high"]'); T.click('.priority-toggle[data-priority="low"]'); T.click('[data-status="all"]');
+  await T.until(() => titles().length === 6, 'filters cleared');
+});
+
+T.test('8. completing a recurring High task creates its next occurrence as High', async () => {
+  await add('Weekly review', { priority: 'high', repeat: 'weekly' });
+  T.check(`#${row('Weekly review').querySelector('input').id}`);
+  await T.until(() => T.$$('.task').filter((li) => li.querySelector('label').textContent === 'Weekly review').length === 2, 'next occurrence');
+  const next = T.$$('.task').find((li) => li.querySelector('label').textContent === 'Weekly review' && !li.classList.contains('done'));
+  T.expect(next.querySelector('.priority').textContent === 'High', 'next occurrence keeps High');
+});
+</script>
+</body></html>

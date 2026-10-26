@@ -113,3 +113,43 @@ test('grade: higher of unit/browser coverage per file; never loaded = FAIL', () 
   assert.match(rows[0].detail, /unit 70% · browser 92% \(uncovered lines: 12\)/);
   assert.equal(rows[2].detail, 'not loaded by any test');
 });
+
+const { unitTestCases, mergeRiskCases, toResults } = require('../evals/scoring');
+
+test('unit-tests eval: one case per changed source file, pass when unit coverage >= 80%', () => {
+  const cases = unitTestCases(['todo/a.js', 'todo/b.js', 'todo/c.js'], { 'todo/a.js': { lines: 100 }, 'todo/b.js': { lines: 60 } });
+  assert.deepEqual(cases.map((c) => [c.id, c.pass]), [['todo/a.js', true], ['todo/b.js', false], ['todo/c.js', false]]);
+  assert.match(cases[1].detail, /60%/);
+  assert.match(cases[2].detail, /no unit test/);
+});
+
+test('merge-risk eval: safe-by-default factors pass, risky ones fail with reasons', () => {
+  const f = (path, added, deleted = 0) => ({ path, added, deleted });
+  const safe = mergeRiskCases({ files: [f('todo/filters.js', 40), f('todo/tests/filters.test.js', 60)], sastFindings: [] });
+  assert.ok(safe.length >= 7);
+  assert.ok(safe.every((c) => c.pass), JSON.stringify(safe.filter((c) => !c.pass)));
+  const risky = mergeRiskCases({ files: [f('todo/db.js', 500), f('a/x.js', 1), f('b/y.js', 1), f('todo/package-lock.json', 900)], sastFindings: [{ severity: 'high' }] });
+  const failed = risky.filter((c) => !c.pass).map((c) => c.id).sort();
+  assert.deepEqual(failed, ['few-modules', 'no-dependency-changes', 'no-high-sast-findings', 'no-sensitive-areas', 'small-diff', 'test-ratio']);
+});
+
+test('results: score is the % of passing cases, shape matches results.json', () => {
+  const r = toResults('unit-tests', 16, [{ id: 'a', pass: true, detail: 'x' }, { id: 'b', pass: false, detail: 'y' }, { id: 'c', pass: true, detail: 'z' }], { head: 'abc' });
+  assert.equal(r.eval, 'unit-tests');
+  assert.equal(r.ticket, 16);
+  assert.equal(r.score, 67);
+  assert.equal(r.passed, 2);
+  assert.equal(r.total, 3);
+  assert.deepEqual(r.cases[1], { id: 'b', pass: false, detail: 'y' });
+  assert.equal(r.head, 'abc');
+  assert.ok(!Number.isNaN(Date.parse(r.generatedAt)));
+});
+
+test('merge-risk eval: documentation is not counted as risky source', () => {
+  const f = (path, added) => ({ path, added, deleted: 0 });
+  const cases = mergeRiskCases({ files: [f('todo/app.js', 20), f('todo/tests/app.test.js', 20), f('CLAUDE.md', 5), f('todo/README.md', 40), f('docs/guide.txt', 9)] });
+  const byId = Object.fromEntries(cases.map((c) => [c.id, c]));
+  assert.match(byId['few-files'].detail, /^1 source files/);
+  assert.match(byId['few-modules'].detail, /^1 module\(s\): todo /);
+  assert.match(byId['small-diff'].detail, /^20 source lines/);
+});

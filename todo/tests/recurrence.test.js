@@ -62,7 +62,7 @@ test('nextDue returns null for non-recurring tasks', () => {
 test('nextOccurrence: completed recurring task -> new open task with same title, tags and repeat', () => {
   const done = { id: 3, title: 'Water plants', done: true, due: '2026-10-26T18:00', tags: ['home'], repeat: 'daily', spawnedNext: false };
   assert.deepEqual(nextOccurrence(done, at(2026, 10, 26, 12)),
-    { title: 'Water plants', due: '2026-10-27T18:00', tags: ['home'], repeat: 'daily' });
+    { title: 'Water plants', due: '2026-10-27T18:00', tags: ['home'], repeat: 'daily', priority: 'medium' });
 });
 
 test('nextOccurrence: nothing for open, non-recurring, already-spawned or tampered tasks', () => {
@@ -80,4 +80,10 @@ test('repeatLabel: human label, empty for none', () => {
   assert.equal(repeatLabel('monthly'), '↻ Monthly');
   assert.equal(repeatLabel('none'), '');
   assert.equal(repeatLabel('bogus'), '');
+});
+
+test('nextOccurrence: the next occurrence keeps the priority (tampered values become medium)', () => {
+  const base = { title: 'Report', done: true, due: null, tags: [], repeat: 'weekly', spawnedNext: false };
+  assert.equal(nextOccurrence({ ...base, priority: 'high' }, at(2026, 10, 26)).priority, 'high');
+  assert.equal(nextOccurrence({ ...base, priority: 'urgent' }, at(2026, 10, 26)).priority, 'medium');
 });

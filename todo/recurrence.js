@@ -45,7 +45,8 @@ const Recurrence = (() => {
   function nextOccurrence(task, now = new Date()) {
     const repeat = normalizeRepeat(task.repeat);
     if (!task.done || repeat === 'none' || task.spawnedNext) return null;
-    return { title: task.title, due: nextDue(task.due, repeat, now), tags: [...task.tags], repeat };
+    const P = typeof Priority !== 'undefined' ? Priority : require('./priority');
+    return { title: task.title, due: nextDue(task.due, repeat, now), tags: [...task.tags], repeat, priority: P.normalizePriority(task.priority) };
   }
 
   const repeatLabel = (repeat) => LABELS[normalizeRepeat(repeat)] || '';

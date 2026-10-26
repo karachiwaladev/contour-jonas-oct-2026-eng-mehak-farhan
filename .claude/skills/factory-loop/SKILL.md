@@ -155,8 +155,9 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
    - `Closes #<N>`
    The PR opens as a **draft**. CI re-runs the gate with gitleaks, osv-scanner and semgrep, runs the unit and browser tests, and CodeQL scans the code. If CI fails, fix it on the branch.
 5. **Run the coverage eval on the draft PR:** `node .claude/tools/evals/coverage-eval.js <N>` (it evaluates open PRs too). Every source file the ticket changed must be ≥ 80% (target 90%). Add real tests for any ❌ before review, and put the score in the PR body.
+   Then **run the unit-tests and merge-risk evals:** `node .claude/tools/evals/ticket-evals.js <N>`. It writes `evals/unit-tests/results.json` and `evals/merge-risk/results.json` as `{score, cases: [{id, pass, detail}]}`. **Commit both files to the ticket branch** (`Ticket #<N>: eval results`) and push. Put both scores in the PR body.
 6. **Run the `pr-review` skill on the PR** once the work is final and CI has finished. It re-runs every check, reviews the diff against the plan and the standards, and posts its review on the PR. It fixes blockers and majors (up to 2 rounds), then marks the PR ready (`gh pr ready`) with the `awaiting-review` label. If it can't get the PR clean, the PR stays a draft labelled `needs-attention`. Report that on the ticket instead of step 7.
-7. Reply on the ticket with **Ready for review:**, the PR link, the auto-review verdict and the coverage eval score, plus a one-line summary, ending with `<!-- factory:review -->`. **Don't close the ticket.** Merging the PR closes it.
+7. Reply on the ticket with **Ready for review:**, the PR link, the auto-review verdict, the coverage eval score, and the **unit-tests and merge-risk eval scores**, plus a one-line summary, ending with `<!-- factory:review -->`. **Don't close the ticket.** Merging the PR closes it.
 
 ## Branches and pull requests
 
@@ -188,6 +189,17 @@ For a ticket whose latest factory comment is `review`, check `gh pr view <branch
 | **Merge go-ahead from the owner** | Run `gh pr merge <PR> --squash`. Keep the branch: no `--delete-branch`. Then do what the **Merged** row says. |
 | **Closed without merging** | Leave the ticket open. Post a `factory:declined`-style note asking what to do next, but only once. |
 | Anything else | Waiting. Skip silently. |
+
+## After every build: unit-tests and merge-risk evals
+
+Run `node .claude/tools/evals/ticket-evals.js <N>` after every build (Build flow step 5), and again if the PR changes. It evaluates the ticket's trusted PR code in a temporary worktree:
+
+| Eval | Cases (pass/fail) | Score |
+|---|---|---|
+| **unit-tests** | One per changed source file: does the node:test unit suite cover it at ≥ 80% lines? | % of cases passing |
+| **merge-risk** | Small diff (≤ 400 source lines), ≤ 10 source files, ≤ 2 modules, no sensitive areas (storage, CI, hooks, auth), test-to-source ratio ≥ 0.6, no high SAST findings, no dependency changes | % passing (higher = safer), plus a Low/Medium/High level |
+
+**Always commit `evals/unit-tests/results.json` and `evals/merge-risk/results.json`** after each run, and report both scores in the ticket reply. A failing unit-tests case means a module needs unit tests; failing merge-risk cases should be explained in the PR.
 
 ## After a ticket: coverage eval
 

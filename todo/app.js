@@ -1,14 +1,16 @@
-// Wires the todo page together: events -> TaskDB (db.js) -> Filters / Recurrence -> Render (render.js).
+// Wires the todo page together: events -> TaskDB (db.js) -> Filters / Recurrence / Priority -> Render / Editor.
 const form = document.getElementById('new-task');
 const input = document.getElementById('task-title');
 const dueInput = document.getElementById('task-due');
 const tagsInput = document.getElementById('task-tags');
 const repeatInput = document.getElementById('task-repeat');
+const priorityInput = document.getElementById('task-priority');
 const list = document.getElementById('task-list');
 const empty = document.getElementById('empty');
 const status = document.getElementById('status');
 const filterEls = {
   statusButtons: [...document.querySelectorAll('[data-status]')],
+  priorityButtons: [...document.querySelectorAll('[data-priority]')],
   tagFilter: document.getElementById('tag-filter'),
   tagChips: document.getElementById('tag-chips'),
   clearTags: document.getElementById('clear-tags'),
@@ -56,6 +58,7 @@ async function addTask(title) {
     due: dueInput.value || null,
     tags: Filters.parseTags(tagsInput.value),
     repeat: Recurrence.normalizeRepeat(repeatInput.value),
+    priority: Priority.normalizePriority(priorityInput.value),
   });
   form.reset(); // only once saved, so a failed save keeps what the user typed
   input.focus();
@@ -101,9 +104,43 @@ async function deleteTask(li) {
   await refresh();
 }
 
+async function editTask(li) {
+  const task = await TaskDB.get(Number(li.dataset.id));
+  if (!task) throw new Error('task no longer exists');
+  Editor.open(li, task);
+}
+
+// Saves an edit through the same queue as toggles, so an edit and a toggle can't overwrite each other.
+async function saveEdit(id, values) {
+  const task = await TaskDB.get(id);
+  if (!task) throw new Error('task no longer exists');
+  await TaskDB.put({ ...task, ...values }); // keeps id, done, createdAt and spawnedNext
+  announce(`Saved "${values.title}"`);
+  await refresh();
+}
+
 list.addEventListener('click', (e) => {
-  if (e.target.dataset.action === 'delete') deleteTask(e.target.closest('.task')).catch(reportError('delete the task'));
+  const action = e.target.dataset.action, li = e.target.closest('.task');
+  if (action === 'delete') deleteTask(li).catch(reportError('delete the task'));
+  if (action === 'edit') editTask(li).catch(reportError('edit the task'));
+  if (action === 'cancel') refresh().catch(reportError('load tasks'));
 });
+
+list.addEventListener('submit', (e) => {
+  if (!e.target.classList.contains('edit-form')) return;
+  e.preventDefault();
+  const { values, error } = Editor.read(e.target);
+  if (error) return Editor.showError(e.target, error);
+  const id = Number(e.target.closest('.task').dataset.id);
+  toggleQueue = toggleQueue.then(() => saveEdit(id, values)).catch(reportError('save the task'));
+});
+
+for (const btn of filterEls.priorityButtons) {
+  btn.addEventListener('click', () => {
+    const p = btn.dataset.priority;
+    setFilters({ priorities: filters.priorities.includes(p) ? filters.priorities.filter((x) => x !== p) : [...filters.priorities, p] });
+  });
+}
 
 for (const btn of filterEls.statusButtons) {
   btn.addEventListener('click', () => setFilters({ status: btn.dataset.status }));

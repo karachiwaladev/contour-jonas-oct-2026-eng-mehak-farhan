@@ -1,8 +1,8 @@
 // Pure filter, sort and label logic for the todo app. No DOM, no storage side effects.
 // Loaded in the browser as a classic script (global `Filters`), and require()d by node tests.
 const Filters = (() => {
+  const P = typeof Priority !== 'undefined' ? Priority : require('./priority');
   const STATUSES = ['all', 'open', 'done'];
-  const DEFAULT_FILTERS = { status: 'all', tags: [] };
 
   // "Work, work , Urgent" -> ["work", "urgent"]
   function parseTags(text) {
@@ -26,21 +26,27 @@ const Filters = (() => {
     return { text: `${date}, ${time}`, state: '' };
   }
 
-  // Open tasks by due date (soonest first, undated last), then completed tasks by creation time.
+  // Open tasks by priority (High, Medium, Low), then due date (soonest first, undated last); completed tasks last,
+  // by creation time.
   function compareTasks(a, b) {
     if (a.done !== b.done) return a.done - b.done;
     if (!a.done) {
+      const byPriority = P.priorityRank(a.priority) - P.priorityRank(b.priority);
+      if (byPriority) return byPriority;
       if (a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
       if (!!a.due !== !!b.due) return a.due ? -1 : 1;
     }
     return a.createdAt - b.createdAt;
   }
 
-  // filters: { status: 'all' | 'open' | 'done', tags: string[] }. A task matches the tag filter if it has ANY selected tag.
+  // filters: { status: 'all' | 'open' | 'done', tags: string[], priorities?: string[] }. Tag and priority filters each
+  // match ANY selected value (empty = all), and combine with status (AND).
   function matchesFilters(task, filters) {
     if (filters.status === 'open' && task.done) return false;
     if (filters.status === 'done' && !task.done) return false;
     if (filters.tags.length && !task.tags.some((t) => filters.tags.includes(t))) return false;
+    const priorities = filters.priorities || [];
+    if (priorities.length && !priorities.includes(P.normalizePriority(task.priority))) return false;
     return true;
   }
 
@@ -57,10 +63,11 @@ const Filters = (() => {
     try {
       const saved = JSON.parse(storage.getItem(key));
       if (saved && STATUSES.includes(saved.status) && Array.isArray(saved.tags)) {
-        return { status: saved.status, tags: saved.tags.filter((t) => typeof t === 'string') };
+        const priorities = Array.isArray(saved.priorities) ? saved.priorities.filter((p) => P.PRIORITIES.includes(p)) : [];
+        return { status: saved.status, tags: saved.tags.filter((t) => typeof t === 'string'), priorities };
       }
     } catch {}
-    return { ...DEFAULT_FILTERS, tags: [] };
+    return { status: 'all', tags: [], priorities: [] };
   }
 
   // localStorage can throw on access (blocked storage, some private modes); fall back to a no-op store.

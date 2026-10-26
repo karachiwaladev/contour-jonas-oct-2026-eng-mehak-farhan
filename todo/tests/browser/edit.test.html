@@ -1,0 +1,96 @@
+<!doctype html>
+<!-- Editing tasks (ticket #16): prefilled form, save every field, cancel, validation, XSS, deleted-task save.
+     Run: node .claude/tools/browser-test.js todo/tests/browser/edit.test.html -->
+<html><head><meta charset="utf-8"><title>edit browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+const titles = () => T.$$('.task label').map((l) => l.textContent);
+const row = (title) => T.$$('.task').find((li) => li.querySelector('label') && li.querySelector('label').textContent === title);
+const form = () => T.$('.edit-form');
+async function add(title, opts = {}) {
+  T.fill('#task-title', title); T.fill('#task-due', opts.due || ''); T.fill('#task-tags', opts.tags || '');
+  T.$('#task-repeat').value = opts.repeat || 'none'; T.$('#task-priority').value = opts.priority || 'medium';
+  T.submit('#new-task');
+  await T.until(() => titles().includes(title), `"${title}" to appear`);
+}
+async function openEditor(title) {
+  row(title).querySelector('.edit').click();
+  await T.until(() => form(), 'edit form');
+}
+const setField = (cls, value) => { const el = form().querySelector(cls); el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); };
+
+T.test('5. Edit opens a form prefilled with title, due, tags, repeat and priority', async () => {
+  await T.open('/todo/index.html');
+  await T.until(() => !T.$('#empty').hidden, 'app ready');
+  await add('Write report', { due: '2026-12-01T09:30', tags: 'work, q4', repeat: 'weekly', priority: 'low' });
+  await openEditor('Write report');
+  const f = form();
+  T.expect(f.querySelector('.edit-title').value === 'Write report', 'title');
+  T.expect(f.querySelector('.edit-due').value === '2026-12-01T09:30', `due ${f.querySelector('.edit-due').value}`);
+  T.expect(f.querySelector('.edit-tags').value === 'work, q4', `tags ${f.querySelector('.edit-tags').value}`);
+  T.expect(f.querySelector('.edit-repeat').value === 'weekly', 'repeat');
+  T.expect(f.querySelector('.edit-priority').value === 'low', 'priority');
+});
+
+T.test('6a. Cancel discards changes', async () => {
+  setField('.edit-title', 'Changed but cancelled');
+  form().querySelector('.cancel').click();
+  await T.until(() => !form() && row('Write report'), 'back to the row');
+  T.expect(!titles().includes('Changed but cancelled'), 'nothing saved');
+});
+
+T.test('6b. Save updates every field, and it survives a reload', async () => {
+  await openEditor('Write report');
+  setField('.edit-title', 'Write final report');
+  setField('.edit-due', '2026-12-05T14:00');
+  setField('.edit-tags', 'Work, URGENT, work');
+  form().querySelector('.edit-repeat').value = 'none';
+  form().querySelector('.edit-priority').value = 'high';
+  form().requestSubmit();
+  await T.until(() => !form() && row('Write final report'), 'saved row');
+  const check = () => {
+    const r = row('Write final report');
+    const chips = [...r.querySelectorAll('.tag')].map((c) => c.textContent).join(',');
+    T.expect(r.querySelector('.priority').textContent === 'High', 'priority saved');
+    T.expect(chips === 'work,urgent', `tags normalized: ${chips}`);
+    T.expect(!r.querySelector('.repeat'), 'repeat removed');
+    T.expect(/Dec 5/.test(r.querySelector('.due').textContent), `due: ${r.querySelector('.due').textContent}`);
+  };
+  check();
+  T.expect(T.$('#status').textContent === 'Saved "Write final report"', T.$('#status').textContent);
+  await T.reload();
+  await T.until(() => row('Write final report'), 'after reload');
+  check();
+});
+
+T.test('7. empty title is rejected and the form stays open; HTML in an edited title is shown as text', async () => {
+  await openEditor('Write final report');
+  setField('.edit-title', '   ');
+  form().requestSubmit();
+  await T.until(() => form().querySelector('.edit-error').textContent !== '', 'validation message');
+  T.expect(form() && titles().length === 0 || form(), 'form still open');
+  setField('.edit-title', '<img src=x onerror="window.pwned=1">');
+  form().requestSubmit();
+  await T.until(() => !form(), 'saved');
+  T.expect(!T.win().pwned && !T.$('.task img') && titles().includes('<img src=x onerror="window.pwned=1">'), 'rendered as text');
+});
+
+T.test('threat 3: saving an edit to a task deleted meanwhile reports an error', async () => {
+  await add('Doomed task');
+  await openEditor('Doomed task');
+  const id = Number(form().closest('.task').dataset.id);
+  await new Promise((resolve, reject) => {
+    const r = indexedDB.open('todo-app', 1);
+    r.onsuccess = () => { const tx = r.result.transaction('tasks', 'readwrite'); tx.objectStore('tasks').delete(id);
+      tx.oncomplete = () => { r.result.close(); resolve(); }; tx.onerror = () => reject(tx.error); };
+    r.onerror = () => reject(r.error);
+  });
+  setField('.edit-title', 'Still doomed');
+  form().requestSubmit();
+  await T.until(() => T.$('#status').textContent.startsWith('Could not save the task'), 'error message');
+  T.expect(/no longer exists/.test(T.$('#status').textContent), T.$('#status').textContent);
+});
+</script>
+</body></html>

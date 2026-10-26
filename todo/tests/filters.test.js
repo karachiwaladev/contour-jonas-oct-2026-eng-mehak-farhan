@@ -62,11 +62,11 @@ test('pruneTags: drops selected tags that no task uses any more', () => {
 
 test('loadFilters: falls back to defaults on missing, corrupt or invalid storage', () => {
   const store = (value) => ({ getItem: () => value });
-  assert.deepEqual(loadFilters(store(null)), { status: 'all', tags: [] });
-  assert.deepEqual(loadFilters(store('{not json')), { status: 'all', tags: [] });
-  assert.deepEqual(loadFilters(store('{"status":"weird","tags":[]}')), { status: 'all', tags: [] });
-  assert.deepEqual(loadFilters(store('{"status":"open","tags":["a"]}')), { status: 'open', tags: ['a'] });
-  assert.deepEqual(loadFilters({ getItem: () => { throw new Error('blocked'); } }), { status: 'all', tags: [] });
+  assert.deepEqual(loadFilters(store(null)), { status: 'all', tags: [], priorities: [] });
+  assert.deepEqual(loadFilters(store('{not json')), { status: 'all', tags: [], priorities: [] });
+  assert.deepEqual(loadFilters(store('{"status":"weird","tags":[]}')), { status: 'all', tags: [], priorities: [] });
+  assert.deepEqual(loadFilters(store('{"status":"open","tags":["a"]}')), { status: 'open', tags: ['a'], priorities: [] });
+  assert.deepEqual(loadFilters({ getItem: () => { throw new Error('blocked'); } }), { status: 'all', tags: [], priorities: [] });
 });
 
 test('safeStorage: returns the window localStorage when accessible', () => {
@@ -80,7 +80,7 @@ test('safeStorage: blocked storage (getter throws) falls back to a no-op store',
   assert.equal(store.getItem('todo-filters'), null);
   assert.doesNotThrow(() => store.setItem('todo-filters', '{}'));
   // and the app's filter loading still works on top of it
-  assert.deepEqual(loadFilters(store), { status: 'all', tags: [] });
+  assert.deepEqual(loadFilters(store), { status: 'all', tags: [], priorities: [] });
 });
 
 test('saveFilters: writes the filters as JSON and reports success', () => {
@@ -93,4 +93,30 @@ test('saveFilters: writes the filters as JSON and reports success', () => {
 test('saveFilters: a failing setItem (quota exceeded, blocked) is swallowed and reported', () => {
   const full = { setItem() { throw new Error('QuotaExceededError'); } };
   assert.equal(saveFilters(full, { status: 'all', tags: [] }), false);
+});
+
+test('compareTasks: open tasks by priority first (High, Medium, Low), then due date', () => {
+  const tasks = [
+    task({ title: 'low-soon', priority: 'low', due: '2026-10-27T09:00' }),
+    task({ title: 'high-late', priority: 'high', due: '2026-12-01T09:00' }),
+    task({ title: 'medium-none' }), // no priority stored -> medium
+    task({ title: 'medium-soon', priority: 'medium', due: '2026-10-28T09:00' }),
+    task({ title: 'done-high', priority: 'high', done: true }),
+  ];
+  assert.deepEqual(tasks.sort(compareTasks).map((t) => t.title), ['high-late', 'medium-soon', 'medium-none', 'low-soon', 'done-high']);
+});
+
+test('matchesFilters: priority filter matches ANY selected priority and combines with status and tags', () => {
+  const t = task({ priority: 'high', tags: ['work'] });
+  assert.equal(matchesFilters(t, { status: 'all', tags: [], priorities: [] }), true); // empty = all
+  assert.equal(matchesFilters(t, { status: 'all', tags: [], priorities: ['high', 'low'] }), true);
+  assert.equal(matchesFilters(t, { status: 'all', tags: [], priorities: ['low'] }), false);
+  assert.equal(matchesFilters(t, { status: 'all', tags: ['home'], priorities: ['high'] }), false);
+  assert.equal(matchesFilters(task(), { status: 'all', tags: [], priorities: ['medium'] }), true); // missing priority = medium
+  assert.equal(matchesFilters(t, { status: 'all', tags: [] }), true); // older saved filters without priorities
+});
+
+test('loadFilters: restores saved priorities, dropping invalid ones', () => {
+  const store = { getItem: () => '{"status":"open","tags":[],"priorities":["high","urgent",3,"low"]}' };
+  assert.deepEqual(loadFilters(store), { status: 'open', tags: [], priorities: ['high', 'low'] });
 });

@@ -65,7 +65,13 @@ function runPage(browser, page) {
   const proc = spawn(browser, [...flags, `http://localhost:${port}/${page}`], { stdio: 'ignore' });
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve({ page, timeout: true, results: [] }), timeoutMs);
-    pending = (data) => { clearTimeout(timer); resolve({ page, ...data }); };
+    // Only accept results from THIS page: a slow page that timed out can still post late, and must not be
+    // credited to the next page.
+    pending = (data) => {
+      if (data.page && data.page !== `/${page}`) return;
+      clearTimeout(timer);
+      resolve({ page, ...data });
+    };
   }).finally(() => {
     pending = null;
     proc.kill();
