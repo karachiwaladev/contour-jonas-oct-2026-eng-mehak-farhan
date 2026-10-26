@@ -74,9 +74,22 @@ T.test('7. deleting the open occurrence ends the series', async () => {
   T.expect(tasks('Pay rent').length === 1, 'only the completed history remains');
 });
 
+T.test('5b. rapid tick/untick (faster than IndexedDB) still never creates a duplicate', async () => {
+  await add('Stretch', { repeat: 'daily', due: day(0, 23, 57) });
+  const box = open('Stretch')[0].querySelector('input');
+  // Two change events before either handler's database reads finish (a double-click race).
+  box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true }));
+  box.checked = false; box.dispatchEvent(new Event('change', { bubbles: true }));
+  await T.until(() => tasks('Stretch').length === 2 && done('Stretch').length === 0, 'next created, original unticked');
+  tick(open('Stretch').find((li) => li.querySelector('.due').textContent.startsWith('Today')));
+  await T.until(() => done('Stretch').length === 1, 're-ticked');
+  await new Promise((r) => setTimeout(r, 300)); // give any duplicate time to appear
+  T.expect(tasks('Stretch').length === 2, `copies: ${tasks('Stretch').length}`);
+});
+
 T.test('9. everything survives a reload', async () => {
   await T.reload();
-  await T.until(() => tasks('Water plants').length === 2, 'tasks after reload');
+  await T.until(() => tasks('Water plants').length === 2 && tasks('Stretch').length === 2, 'tasks after reload');
   T.expect(tasks('Team sync')[0].querySelector('.repeat').textContent === '↻ Weekly', 'repeat label after reload');
   T.expect(tasks('Pay rent').length === 1 && tasks('Weekly report').length === 2, 'series state after reload');
 });
