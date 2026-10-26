@@ -8,6 +8,8 @@ const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { scanFiles } = require('./secret-scan');
+const sast = require('./sast-scan');
+const { findNode, findTestFiles } = require('./run-tests');
 
 const args = process.argv.slice(2);
 const ALL = args.includes('--all');
@@ -78,7 +80,7 @@ function checkFileSize(files) {
 
 function checkTests(files, projects) {
   if (!projects.length) return add('Tests', 'SKIP', 'no project folders changed');
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  const node = findNode(18);
   for (const p of projects) {
     const pkgPath = path.join(p, 'package.json');
     const pkg = fs.existsSync(pkgPath) ? JSON.parse(fs.readFileSync(pkgPath, 'utf8')) : null;
@@ -90,12 +92,14 @@ function checkTests(files, projects) {
       const r = run('npm', ['test', '--silent'], p);
       status = r.ok ? 'PASS' : 'FAIL';
       detail = `npm test: ${r.ok ? 'passed' : lastLine(r.out)}`;
-    } else if (fs.existsSync(path.join(p, 'tests'))) {
-      if (nodeMajor < 18) { status = 'WARN'; detail = `tests/ found but node --test needs Node 18+ (running ${process.version})`; }
+    } else if (findTestFiles([path.join(p, 'tests')]).length) {
+      const testFiles = findTestFiles([path.join(p, 'tests')]);
+      if (!node) { status = 'WARN'; detail = 'tests found but no Node 18+ available (set FACTORY_NODE)'; }
       else {
-        const r = run(process.execPath, ['--test', 'tests/'], p);
+        const r = run(node.exe, ['--test', ...testFiles]);
+        const summary = (/# pass (\d+)[\s\S]*# fail (\d+)/.exec(r.out) || []).slice(1);
         status = r.ok ? 'PASS' : 'FAIL';
-        detail = `node --test: ${r.ok ? 'passed' : lastLine(r.out)}`;
+        detail = `node --test (Node ${node.major}): ${summary.length ? `${summary[0]} passed, ${summary[1]} failed` : lastLine(r.out)}`;
       }
     } else { status = 'WARN'; detail = 'no automated tests (TDD expects tests)'; }
     if (status === 'PASS' && srcChanged && !testsChanged) { status = 'WARN'; detail += '; source changed without test changes'; }
@@ -125,6 +129,21 @@ function checkSecrets(files) {
     ' (built-in scan; install gitleaks for full history scanning)');
 }
 
+function checkSast(files) {
+  const scanned = files.filter((f) => !IGNORED.test(f) && !TEST_FILE.test(f));
+  const found = sast.scanFiles(scanned);
+  const by = (s) => found.filter((f) => f.severity === s);
+  const list = (arr) => arr.map((f) => `${f.file}:${f.line} ${f.rule}`).join(', ');
+  const status = by('high').length ? 'FAIL' : by('medium').length ? 'WARN' : 'PASS';
+  const parts = [by('high').length && `high: ${list(by('high'))}`, by('medium').length && `medium: ${list(by('medium'))}`,
+    by('low').length && `low: ${list(by('low'))}`].filter(Boolean);
+  add('SAST (built-in)', status, parts.length ? parts.join('; ') : 'no insecure patterns');
+  if (has('semgrep')) {
+    const r = run('semgrep', ['scan', '--config', 'p/javascript', '--config', 'p/secrets', '--error', '--quiet', '--metrics=off', ...scanned]);
+    add('SAST (semgrep)', r.ok ? 'PASS' : 'FAIL', r.ok ? 'no findings' : lastLine(r.out));
+  }
+}
+
 function checkDependencies(projects) {
   const locks = projects.flatMap((p) => LOCKFILES.filter((l) => fs.existsSync(path.join(p, l))).map((l) => path.join(p, l)));
   if (!locks.length) return add('Dependencies', 'SKIP', 'no lockfiles in changed projects');
@@ -137,6 +156,17 @@ function checkDependencies(projects) {
       add(`Dependencies: ${lock}`, r.ok ? 'PASS' : 'FAIL', r.ok ? 'npm audit: no high/critical' : `npm audit: ${lastLine(r.out)}`);
     } else add(`Dependencies: ${lock}`, 'WARN', 'not scanned (install osv-scanner)');
   }
+}
+
+// The factory's own tools have tests too. Run them when anything under .claude/tools changes.
+function checkToolTests(files) {
+  if (!ALL && !files.some((f) => f.startsWith('.claude/tools/'))) return;
+  const testFiles = findTestFiles([path.join('.claude', 'tools', 'tests')]);
+  const node = findNode(18);
+  if (!testFiles.length || !node) return add('Tests: .claude/tools/', 'WARN', !node ? 'no Node 18+ available' : 'no tool tests');
+  const r = run(node.exe, ['--test', ...testFiles]);
+  const m = /# pass (\d+)[\s\S]*# fail (\d+)/.exec(r.out);
+  add('Tests: .claude/tools/', r.ok ? 'PASS' : 'FAIL', m ? `${m[1]} passed, ${m[2]} failed` : lastLine(r.out));
 }
 
 function checkDiffSize() {
@@ -155,7 +185,9 @@ checkFileSize(files);
 checkTests(files, projects);
 checkLint(projects);
 checkSecrets(files);
+checkSast(files);
 checkDependencies(projects);
+checkToolTests(files);
 checkDiffSize();
 
 const icon = { PASS: '✅', WARN: '⚠️', FAIL: '❌', SKIP: '➖' };

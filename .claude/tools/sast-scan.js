@@ -22,8 +22,8 @@ const LINE_RULES = [
     message: 'String timers are evaluated like eval. Pass a function.' },
   { id: 'command-injection', severity: 'high', files: JS, re: /\b(?:exec|execSync|spawn|spawnSync)\s*\(\s*`[^`]*\$\{/,
     message: 'Shell command built from interpolated data. Use execFile/spawn with an args array.' },
-  { id: 'react-dangerous-html', severity: 'high', files: JS, re: /dangerouslySetInnerHTML/,
-    message: 'dangerouslySetInnerHTML renders raw HTML.' },
+  { id: 'react-dangerous-html', severity: 'high', files: JS, re: /dangerouslySetInnerHTML/, // sast-scan: allow (rule definition)
+    message: 'dangerouslySetInnerHTML renders raw HTML.' }, // sast-scan: allow (rule definition)
   { id: 'insecure-http', severity: 'medium', files: JS, re: /['"`]http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])/,
     message: 'Plain-HTTP URL. Use https.' },
   { id: 'sensitive-storage', severity: 'medium', files: JS,
