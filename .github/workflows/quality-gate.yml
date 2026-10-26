@@ -39,10 +39,15 @@ jobs:
             echo "No lockfiles, so skipping osv-scanner install."
           fi
 
+      # semgrep 1.85 crashes on Python 3.12+ (protobuf metaclass error), so pin a supported Python.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install semgrep (SAST)
         run: |
-          python3 -m pip install --quiet --user semgrep==1.85.0
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          python -m pip install --quiet semgrep==1.85.0
+          semgrep --version
 
       - name: Install project dependencies
         run: |

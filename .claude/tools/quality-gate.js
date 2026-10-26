@@ -34,7 +34,7 @@ function run(cmd, cmdArgs, cwd) {
   // Windows needs a shell only for npm and .cmd shims; using one for real executables breaks paths with spaces.
   const shell = process.platform === 'win32' && (cmd === 'npm' || /\.cmd$/i.test(cmd));
   const r = spawnSync(cmd, cmdArgs, { cwd, encoding: 'utf8', shell });
-  return { ok: r.status === 0, out: `${r.stdout || ''}${r.stderr || ''}`.trim() };
+  return { ok: r.status === 0, status: r.status, out: `${r.stdout || ''}${r.stderr || ''}`.trim() };
 }
 function lastLine(text) { return (text.split('\n').filter(Boolean).pop() || '').slice(0, 160); }
 function pickBase() { return tryGit('rev-parse', '--verify', '-q', 'main') ? 'main' : 'origin/main'; }
@@ -140,7 +140,9 @@ function checkSast(files) {
   add('SAST (built-in)', status, parts.length ? parts.join('; ') : 'no insecure patterns');
   if (has('semgrep')) {
     const r = run('semgrep', ['scan', '--config', 'p/javascript', '--config', 'p/secrets', '--error', '--quiet', '--metrics=off', ...scanned]);
-    add('SAST (semgrep)', r.ok ? 'PASS' : 'FAIL', r.ok ? 'no findings' : lastLine(r.out));
+    // semgrep exits 1 for findings; any other non-zero code means the tool itself failed (not the code).
+    const status = r.ok ? 'PASS' : r.status === 1 ? 'FAIL' : 'WARN';
+    add('SAST (semgrep)', status, r.ok ? 'no findings' : r.status === 1 ? lastLine(r.out) : `semgrep error (exit ${r.status}): ${lastLine(r.out)}`);
   }
 }
 
