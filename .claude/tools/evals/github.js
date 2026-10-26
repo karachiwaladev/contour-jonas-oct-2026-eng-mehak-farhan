@@ -1,17 +1,18 @@
-// GitHub lookups for the ticket evals (via the gh CLI): the ticket, its plan, its PRs and where they landed.
+// GitHub lookups for the coverage eval (via the gh CLI): the ticket, its PRs, posting the scorecard.
 const { execFileSync } = require('child_process');
-const { referencesTicket } = require('./qa');
 
 const gh = (args) => JSON.parse(execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
 
-function getTicket(n) {
-  return gh(['issue', 'view', String(n), '--json', 'number,title,state,stateReason,body,comments,url']);
+// A PR belongs to ticket N if its body says Closes/Fixes/Resolves/Part of #N, or (no body reference) its title says #N.
+function referencesTicket(pr, n) {
+  const ref = new RegExp(`\\b(?:closes|fixes|resolves|part of)\\s+#${n}\\b`, 'i');
+  if (ref.test(pr.body || '')) return true;
+  if (/\b(?:closes|fixes|resolves|part of)\s+#\d+/i.test(pr.body || '')) return false; // body names another ticket
+  return new RegExp(`#${n}\\b`).test(pr.title || '');
 }
 
-// The latest factory plan comment (marker <!-- factory:plan -->), or null.
-function latestPlan(ticket) {
-  const plans = ticket.comments.filter((c) => c.body.includes('<!-- factory:plan -->'));
-  return plans.length ? plans[plans.length - 1].body : null;
+function getTicket(n) {
+  return gh(['issue', 'view', String(n), '--json', 'number,title,state,url']);
 }
 
 function ticketPRs(n) {
@@ -29,4 +30,4 @@ function postComment(n, bodyFile) {
   execFileSync('gh', ['issue', 'comment', String(n), '--body-file', bodyFile], { stdio: 'inherit' });
 }
 
-module.exports = { getTicket, latestPlan, ticketPRs, defaultBranch, postComment };
+module.exports = { referencesTicket, getTicket, ticketPRs, defaultBranch, postComment };

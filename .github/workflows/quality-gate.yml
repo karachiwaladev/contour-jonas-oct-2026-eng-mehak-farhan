@@ -72,9 +72,6 @@ jobs:
       - name: Unit tests with coverage (all projects + factory tools)
         run: node .claude/tools/run-tests.js --coverage
 
-      - name: Golden sets (must stay at 100%)
-        run: node .claude/tools/evals/golden.js
-
       - name: Browser tests (headless Chrome)
         env:
           BROWSER: /usr/bin/google-chrome

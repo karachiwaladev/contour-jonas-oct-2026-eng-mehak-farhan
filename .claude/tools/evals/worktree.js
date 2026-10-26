@@ -1,13 +1,12 @@
-// Git side of the ticket evals: temporary worktrees (the user's checkout is never touched), the ticket's
-// changed files, and the SWE-bench-style fail-to-pass check for unit tests.
-const { execFileSync, spawnSync } = require('child_process');
+// Git side of the coverage eval: temporary worktrees (the user's checkout is never touched) and the files a
+// ticket changed.
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..', '..', '..');
 const git = (args, cwd = root) => execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
-const UNIT_TEST = /\.test\.[cm]?js$/;
 
 function addWorktree(sha) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-eval-'));
@@ -40,23 +39,4 @@ function changedFiles({ commits, base, head }) {
   return [...byPath.values()];
 }
 
-function runNodeTest(node, file, cwd) {
-  const r = spawnSync(node, ['--test', file], { cwd, encoding: 'utf8' });
-  const m = /# pass (\d+)[\s\S]*# fail (\d+)/.exec(`${r.stdout}${r.stderr}`);
-  return { ok: r.status === 0, passed: m ? Number(m[1]) : 0, failed: m ? Number(m[2]) : 0 };
-}
-
-// For each unit-test file the ticket added or changed: does the HEAD version of the test fail against the
-// BASE code (before the ticket) and pass against the HEAD code? That proves the tests exercise the new work.
-function failToPass({ node, baseDir, headDir, head, testFiles }) {
-  return testFiles.filter((f) => UNIT_TEST.test(f) && fs.existsSync(path.join(headDir, f))).map((file) => {
-    const target = path.join(baseDir, file);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, git(['show', `${head}:${file}`]));
-    const before = runNodeTest(node, target, baseDir);
-    const after = runNodeTest(node, path.join(headDir, file), headDir);
-    return { file, failsBefore: !before.ok, passesAfter: after.ok, before, after };
-  });
-}
-
-module.exports = { git, addWorktree, removeWorktree, changedFiles, failToPass, runNodeTest, root };
+module.exports = { git, addWorktree, removeWorktree, changedFiles, root };

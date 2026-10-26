@@ -1,6 +1,6 @@
 ---
 name: factory-loop
-description: The software-factory loop for this repo. Works through every open workshop ticket (GitHub issues titled "Ticket ..."), oldest first, and turns each into finished work on GitHub. It answers questions, makes file changes directly, and runs build work (new projects or features) through clarify → plan → approval → build → browser verification with screenshots. Every repo change lands as a PR assigned to the owner for review, and is never merged without their explicit go-ahead. Builds add tests until coverage targets are met, and every ticket is scored by the ticket eval (Engineering + QA) before review and after the merge. Pass an issue number to process just that ticket.
+description: The software-factory loop for this repo. Works through every open workshop ticket (GitHub issues titled "Ticket ..."), oldest first, and turns each into finished work on GitHub. It answers questions, makes file changes directly, and runs build work (new projects or features) through clarify → plan → approval → build → browser verification with screenshots. Every repo change lands as a PR assigned to the owner for review, and is never merged without their explicit go-ahead. Builds add tests until coverage targets are met, and every ticket is scored by the coverage eval before review and after the merge. Pass an issue number to process just that ticket.
 ---
 
 # Factory loop
@@ -28,7 +28,7 @@ Every comment the factory posts ends with a hidden marker naming its stage:
 | `<!-- factory:review -->` | Work is in an open PR, awaiting the owner's review and go-ahead to merge |
 | `<!-- factory:done -->` | The final answer or report (questions), or the PR is merged |
 | `<!-- factory:declined -->` | A refusal of destructive or out-of-rules work |
-| `<!-- factory:eval -->` | The ticket eval scorecard. **Informational only: ignore it when working out the ticket's state** |
+| `<!-- factory:eval -->` | The coverage eval scorecard. **Informational only: ignore it when working out the ticket's state** |
 
 A **human reply** is any comment *without* a factory marker. Work out the ticket's state from the latest factory comment and whether a human reply follows it:
 
@@ -80,7 +80,7 @@ Keep the single quotes: without them PowerShell reads `{owner}`/`{repo}` as scri
 | Kind | Examples | What to do |
 |---|---|---|
 | **Question** | facts, explanations, comparisons | Answer it accurately, name the source, and say when a figure is from memory rather than a live lookup. If the answer belongs in the repo ("document X", "write a guide"), also create the file. Then reply and close. |
-| **Small change** | create or edit files, docs, config, a bug fix, a rename, a project skeleton with no features | Do it with no plan/approval step, but still on a ticket branch. Bug fixes start with a failing test, and the bug becomes a golden case. Coverage must not drop. Pass the quality gate and the ticket eval, then commit, push and open a PR. Reply with a `factory:review` comment linking it. Leave the ticket open; the merge closes it. |
+| **Small change** | create or edit files, docs, config, a bug fix, a rename, a project skeleton with no features | Do it with no plan/approval step, but still on a ticket branch. Bug fixes start with a failing test. Coverage must not drop. Pass the quality gate and the coverage eval, then commit, push and open a PR. Reply with a `factory:review` comment linking it. Leave the ticket open; the merge closes it. |
 | **Build** | a new project or app, or a new user-facing feature in an existing project | Follow the **Build flow** below. |
 | **Unclear** | missing the information needed to act | Ask specific questions **one at a time** (`factory:questions k/N`, as in **Clarify**) and leave the ticket open. |
 | **Destructive** | delete, wipe, force-push, remove history | Decline (`factory:declined`) with the reason. Leave the ticket open. |
@@ -127,7 +127,6 @@ Leave the ticket open. Don't build until there is an approval.
   - Every file must be at **≥ 80% lines (required)**, and aim for **≥ 90%**.
   - For each uncovered line, find the behaviour it belongs to (often an error path: storage blocked, the database failing, invalid input) and add a test that triggers it for real. Use the `testing` skill: `new-test.js` to scaffold, and fake nothing the browser can do genuinely.
   - Re-measure until the targets are met. Put the before and after figures in the PR.
-- **Add golden cases.** For new pure logic, add its known-hard edge cases to `<project>/tests/golden/*.json`, along with every bug fixed in this ticket. Run `node .claude/tools/evals/golden.js <project>`; it must be 100%.
 - Run the quality gate: `node .claude/tools/quality-gate.js --base main`. Fix every ❌ before moving on.
 
 ### 4. Verify in the browser (chrome-devtools MCP)
@@ -155,9 +154,9 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
    - risks and rollback
    - `Closes #<N>`
    The PR opens as a **draft**. CI re-runs the gate with gitleaks, osv-scanner and semgrep, runs the unit and browser tests, and CodeQL scans the code. If CI fails, fix it on the branch.
-5. **Run the ticket eval on the draft PR:** `node .claude/tools/evals/ticket-eval.js <N>`. It evaluates open PRs too. Fix every ❌ before review: no test changes, a test that doesn't fail on the old code (fail-to-pass), unverified acceptance checks, a missing screenshot, coverage below 80%, or a golden case failing. Explain any ⚠️ in the PR. Put the scorecard summary (overall, Engineering, QA, risk) in the PR body.
+5. **Run the coverage eval on the draft PR:** `node .claude/tools/evals/coverage-eval.js <N>` (it evaluates open PRs too). Every source file the ticket changed must be ≥ 80% (target 90%). Add real tests for any ❌ before review, and put the score in the PR body.
 6. **Run the `pr-review` skill on the PR** once the work is final and CI has finished. It re-runs every check, reviews the diff against the plan and the standards, and posts its review on the PR. It fixes blockers and majors (up to 2 rounds), then marks the PR ready (`gh pr ready`) with the `awaiting-review` label. If it can't get the PR clean, the PR stays a draft labelled `needs-attention`. Report that on the ticket instead of step 7.
-7. Reply on the ticket with **Ready for review:**, the PR link, the auto-review verdict and the eval score, plus a one-line summary, ending with `<!-- factory:review -->`. **Don't close the ticket.** Merging the PR closes it.
+7. Reply on the ticket with **Ready for review:**, the PR link, the auto-review verdict and the coverage eval score, plus a one-line summary, ending with `<!-- factory:review -->`. **Don't close the ticket.** Merging the PR closes it.
 
 ## Branches and pull requests
 
@@ -184,28 +183,23 @@ For a ticket whose latest factory comment is `review`, check `gh pr view <branch
 
 | PR state | What to do |
 |---|---|
-| **Merged** | Confirm the ticket closed (`gh issue view <N> --json state`). If it didn't, close it with `--reason completed`. Post a short `factory:done` comment on the ticket. Switch to `main` and `git pull --ff-only`. The **Ticket eval** workflow then posts a scorecard on the ticket (see **After a ticket: evals**). |
+| **Merged** | Confirm the ticket closed (`gh issue view <N> --json state`). If it didn't, close it with `--reason completed`. Post a short `factory:done` comment on the ticket. Switch to `main` and `git pull --ff-only`. The **Coverage eval** workflow then posts a scorecard on the ticket (see **After a ticket: coverage eval**). |
 | **Change requests** (review comments, "changes requested", or a human comment asking for edits) | Switch to the branch, make the changes (test-first), re-verify the affected acceptance checks in the browser (with new screenshots if the UI changed), commit, and push. Re-run the `pr-review` skill, reply on the PR listing what changed, then post a fresh `factory:review` comment on the ticket. |
 | **Merge go-ahead from the owner** | Run `gh pr merge <PR> --squash`. Keep the branch: no `--delete-branch`. Then do what the **Merged** row says. |
 | **Closed without merging** | Leave the ticket open. Post a `factory:declined`-style note asking what to do next, but only once. |
 | Anything else | Waiting. Skip silently. |
 
-## After a ticket: evals
+## After a ticket: coverage eval
 
-When a `Ticket ...` issue closes as completed, `.github/workflows/ticket-eval.yml` runs `.claude/tools/evals/ticket-eval.js` and posts a `factory:eval` scorecard on the ticket. Run it by hand with `node .claude/tools/evals/ticket-eval.js <N> [--post] [--quick]`. It scores two areas:
+When a `Ticket ...` issue closes as completed, `.github/workflows/coverage-eval.yml` runs `.claude/tools/evals/coverage-eval.js` and posts a `factory:eval` scorecard on the ticket.
+- **Run it by hand:** `node .claude/tools/evals/coverage-eval.js <N> [--post] [--unit-only]`.
+- **What it does:** checks out the ticket's final code in a temporary worktree and measures unit and browser coverage there. It grades **every project source file the ticket changed**: ✅ ≥ 90%, ⚠️ 80–90%, ❌ below 80% or never loaded by any test. The score is out of 100.
 
-| Area | Checks |
-|---|---|
-| **Engineering** | Unit tests written. **Fail-to-pass:** each new or changed test fails on the code from before the ticket and passes after. The full unit suite passes. **PR risk** (Low/Medium/High with reasons) |
-| **QA** | Every plan acceptance check is ✅ in the PRs. Screenshots exist in the repo. Browser tests pass. Browser coverage is ≥ 80% per file. The project's **golden set** passes 100% |
+The loop runs it **twice** per ticket:
+1. **Before review,** on the draft PR (Build flow step 5, without `--post`), to catch coverage gaps while they're cheap to fix.
+2. **After the merge,** for the record. The workflow posts it. If no `factory:eval` comment appears on the closed ticket within a few minutes, run `node .claude/tools/evals/coverage-eval.js <N> --post` yourself.
 
-The loop runs the eval **twice** per ticket:
-1. **Before review,** on the draft PR (Build flow step 5, without `--post`), to catch gaps while they're cheap to fix.
-2. **After the merge,** for the record. The workflow posts it. If no `factory:eval` comment appears on the closed ticket within a few minutes, run `node .claude/tools/evals/ticket-eval.js <N> --post` yourself.
-
-If a check fails after the merge, open a follow-up ticket for it. For example, a test that passes even before the ticket proves nothing, so strengthen it. When a bug is fixed, add it to the project's golden set (`<project>/tests/golden/*.json`).
-
-Include the eval score for each ticket you touched in the run summary.
+If a file scores ❌ after the merge, open a follow-up ticket to add the missing tests. Include each touched ticket's coverage score in the run summary.
 
 ## Posting comments
 

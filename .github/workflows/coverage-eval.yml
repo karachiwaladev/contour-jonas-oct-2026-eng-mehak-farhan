@@ -1,7 +1,7 @@
-name: Ticket eval
+name: Coverage eval
 
-# Scores a finished ticket (Engineering + QA) and posts the scorecard on it. Runs when a "Ticket ..." issue is
-# closed as completed, or on demand: Actions -> Ticket eval -> Run workflow -> ticket number.
+# Measures coverage of the files a finished ticket changed and posts the scorecard on it. Runs when a "Ticket ..."
+# issue is closed as completed, or on demand: Actions -> Coverage eval -> Run workflow -> ticket number.
 on:
   issues:
     types: [closed]
@@ -23,25 +23,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # the eval compares the code before and after the ticket
+          fetch-depth: 0 # the eval checks out the ticket's final commit in a worktree
 
       - uses: actions/setup-node@v7
         with:
           node-version: 20
 
-      - name: Run ticket eval and post the scorecard
+      - name: Run coverage eval and post the scorecard
         env:
           GH_TOKEN: ${{ github.token }}
           BROWSER: /usr/bin/google-chrome
           TICKET: ${{ github.event.issue.number || inputs.ticket }}
         run: |
-          node .claude/tools/evals/ticket-eval.js "$TICKET" --post --json eval.json | tee -a "$GITHUB_STEP_SUMMARY"
+          node .claude/tools/evals/coverage-eval.js "$TICKET" --post --json eval.json | tee -a "$GITHUB_STEP_SUMMARY"
           exit ${PIPESTATUS[0]}
 
       - name: Keep the results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ticket-eval
+          name: coverage-eval
           path: eval.json
           if-no-files-found: ignore
