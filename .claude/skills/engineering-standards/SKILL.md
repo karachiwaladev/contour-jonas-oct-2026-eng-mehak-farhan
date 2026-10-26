@@ -74,10 +74,26 @@ When a file approaches its limit, split it by responsibility as part of the curr
 
 ## Tools
 
-| Tool | Purpose | Local status |
+**Gate and testing** (details in the `testing` skill):
+
+| Tool | Purpose | Where it runs |
 |---|---|---|
-| `node .claude/tools/quality-gate.js` | All checks in one table | Built in |
-| `node .claude/tools/secret-scan.js <files>` | Quick secret scan (also run by the Stop hook before committing) | Built in |
-| gitleaks | Full secret scan of the working tree and history | Optional locally (`winget install Gitleaks.Gitleaks`). Always runs in CI |
-| osv-scanner | Known vulnerabilities in lockfiles | Optional locally (`winget install Google.OSVScanner`). Runs in CI when lockfiles exist |
-| ESLint | Lint, with `max-lines`, `max-lines-per-function` and `complexity` rules | Per project, when it has a config |
+| `node .claude/tools/quality-gate.js` | All checks in one table: syntax, size, tests, lint, secrets, SAST, dependencies, change size | Locally before a PR, and in CI |
+| `node .claude/tools/run-tests.js [--coverage]` | Unit tests with `node:test`, auto-selecting Node 18+ | Locally and in CI |
+| `node .claude/tools/browser-test.js` | Headless browser tests against the real page | Locally (Edge) and in CI (Chrome) |
+| `node .claude/tools/new-test.js <project> <name> [--browser]` | Scaffold a test from the templates | Locally |
+
+**Security toolchain** (layered: each one catches what the others miss):
+
+| Tool | Catches | Where it runs |
+|---|---|---|
+| `secret-scan.js` | Keys and tokens in changed files | Built in: the gate, and the Stop hook before every commit |
+| gitleaks | Secrets anywhere in the working tree **and git history** | CI (always). Locally if installed: `winget install Gitleaks.Gitleaks` |
+| `sast-scan.js` | XSS sinks (`innerHTML`, `insertAdjacentHTML`, `document.write`), `eval`/`new Function`/string timers, shell injection, plain-HTTP URLs, secrets in web storage, `target=_blank` without `noopener`, inline handlers, missing CSP | Built in: the gate. High fails, medium warns. Suppress a reviewed line with `// sast-scan: allow (reason)` |
+| semgrep (`p/javascript`, `p/secrets`) | Pattern-based SAST with community rules | CI. Locally if installed (`pip install semgrep`) |
+| CodeQL (`security-extended`) | Semantic data-flow analysis: tainted input reaching dangerous sinks | CI on every PR, plus weekly. Results under Security → Code scanning |
+| osv-scanner / `npm audit` | Known-vulnerable dependencies in lockfiles | The gate when lockfiles exist. CI installs osv-scanner (`winget install Google.OSVScanner` locally) |
+| Dependabot | Outdated or vulnerable dependencies, opened as PRs | GitHub, weekly. Its PRs wait for owner review like any other |
+| ESLint | Lint, with `max-lines`, `max-lines-per-function`, `complexity` and `eslint-plugin-security` rules | Per project, when it has a config |
+
+**Review:** the `pr-review` skill runs all of the above, reviews the diff against the plan and these standards, and posts its review before the owner sees the PR.
