@@ -35,8 +35,10 @@ Read the title, body, **and all comments**, because later comments can change th
 React with 👀 so the author can see it was picked up:
 
 ```
-gh api --method POST repos/{owner}/{repo}/issues/<N>/reactions -f content=eyes
+gh api --method POST 'repos/{owner}/{repo}/issues/<N>/reactions' -f content=eyes
 ```
+
+Keep the single quotes. Without them, PowerShell reads `{owner}` and `{repo}` as script blocks, and the command fails with "The command parameter was already specified".
 
 ### c. Do the work
 
