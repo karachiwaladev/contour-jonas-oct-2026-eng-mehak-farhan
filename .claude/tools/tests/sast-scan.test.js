@@ -32,7 +32,20 @@ test('does not flag method names that merely contain eval', () => {
 
 test('flags shell command built from a template literal', () => {
   assert.deepEqual(rules('execSync(`git log ${branch}`)'), ['command-injection']);
+  assert.deepEqual(rules('cp.exec(`rm ${path}`)'), ['command-injection']);
   assert.deepEqual(rules("execFileSync('git', ['log', branch])"), []);
+});
+
+test('does not scan comment lines for code patterns', () => {
+  assert.deepEqual(rules('// GitHub lookups for the coverage eval (via the gh CLI)'), []);
+  assert.deepEqual(rules('  * Never set el.innerHTML = data; use textContent'), []);
+  assert.deepEqual(rules('/* eval(x) is dangerous */'), []);
+  assert.deepEqual(rules('eval(code) // runs it'), ['eval']); // code before a trailing comment is still scanned
+});
+
+test('does not flag RegExp exec() on a template literal (a regex match, not a shell)', () => {
+  assert.deepEqual(rules('const m = /# pass (\\d+)/.exec(`${r.stdout}${r.stderr}`);'), []);
+  assert.deepEqual(rules('const m = PATTERN.exec(`${a}`); const n = /x/gi.exec(`${b}`);'), []);
 });
 
 test('flags insecure http URLs but not localhost', () => {

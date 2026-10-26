@@ -82,6 +82,7 @@ When a file approaches its limit, split it by responsibility as part of the curr
 | `node .claude/tools/run-tests.js [--coverage]` | Unit tests with `node:test`, auto-selecting Node 18+ | Locally and in CI |
 | `node .claude/tools/browser-test.js` | Headless browser tests against the real page | Locally (Edge) and in CI (Chrome) |
 | `node .claude/tools/browser-coverage.js` | Line coverage per file from the browser tests. ≥ 80% required, ≥ 90% expected | Locally and in CI (CI fails below 80%) |
+| `node .claude/tools/evals/coverage-eval.js <N>` | **Coverage eval** after a ticket: grades coverage of every source file the ticket changed (≥ 80% required, 90% target) | CI on ticket close (posts a scorecard), or by hand |
 | `node .claude/tools/new-test.js <project> <name> [--browser]` | Scaffold a test from the templates | Locally |
 
 **Security toolchain** (layered: each one catches what the others miss):

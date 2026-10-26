@@ -45,7 +45,7 @@ README.md                 # workshop info and scoring
 .claude/skills/           # factory skills (the loop itself)
 .claude/hooks/            # Stop hook: prompt log + auto-commit/push
 .claude/tools/serve.js    # static server used for browser verification
-.claude/tools/            # quality-gate, run-tests, browser-test, browser-coverage, new-test, scans
+.claude/tools/            # quality-gate, run-tests, browser-test/coverage, scans; evals/ (coverage eval after each ticket)
 .github/                  # PR template, CI (gate, tests, CodeQL), Dependabot
 <name>/                   # one top-level folder per project
   README.md               # layer-2 entry point for that project
