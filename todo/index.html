@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Todo</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
@@ -49,6 +50,8 @@
   </main>
 
   <script src="db.js"></script>
+  <script src="filters.js"></script>
+  <script src="render.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

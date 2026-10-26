@@ -1,0 +1,9 @@
+{
+  "name": "todo",
+  "private": true,
+  "description": "Browser todo app (no build step, no dependencies). Open index.html.",
+  "scripts": {
+    "test": "node ../.claude/tools/run-tests.js tests",
+    "test:browser": "node ../.claude/tools/browser-test.js todo/tests/browser/app.test.html"
+  }
+}
