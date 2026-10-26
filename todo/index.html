@@ -11,10 +11,35 @@
     <h1>Todo</h1>
 
     <form id="new-task" class="new-task" autocomplete="off">
-      <label for="task-title" class="visually-hidden">New task</label>
-      <input id="task-title" name="title" type="text" placeholder="What needs doing?" required maxlength="200">
-      <button type="submit">Add</button>
+      <div class="row">
+        <label for="task-title" class="visually-hidden">New task</label>
+        <input id="task-title" name="title" type="text" placeholder="What needs doing?" required maxlength="200">
+        <button type="submit">Add</button>
+      </div>
+      <div class="row extras">
+        <label class="field">
+          <span>Due</span>
+          <input id="task-due" name="due" type="datetime-local">
+        </label>
+        <label class="field grow">
+          <span>Tags</span>
+          <input id="task-tags" name="tags" type="text" placeholder="work, urgent" maxlength="200">
+        </label>
+      </div>
     </form>
+
+    <section class="filters" aria-label="Filters">
+      <div class="status-filter" role="group" aria-label="Show">
+        <button type="button" data-status="all" aria-pressed="true">All <span class="count" data-count="all"></span></button>
+        <button type="button" data-status="open" aria-pressed="false">Incomplete <span class="count" data-count="open"></span></button>
+        <button type="button" data-status="done" aria-pressed="false">Completed <span class="count" data-count="done"></span></button>
+      </div>
+      <div id="tag-filter" class="tag-filter" role="group" aria-label="Filter by tags (matches any)" hidden>
+        <span class="tag-filter-label">Tags:</span>
+        <span id="tag-chips" class="tag-chips"></span>
+        <button type="button" id="clear-tags" class="link" hidden>Clear</button>
+      </div>
+    </section>
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
 

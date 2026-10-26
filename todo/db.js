@@ -1,5 +1,7 @@
 // Client-side task store backed by IndexedDB.
-// Each task: { id: number (auto), title: string, done: boolean, createdAt: number }
+// Each task: { id: number (auto), title: string, done: boolean, createdAt: number,
+//              due: "YYYY-MM-DDTHH:mm" (local time) | null, tags: string[] }
+// Records saved before due dates and tags existed lack those fields; normalize() fills them in.
 const TaskDB = (() => {
   const DB_NAME = 'todo-app';
   const STORE = 'tasks';
@@ -31,10 +33,13 @@ const TaskDB = (() => {
     });
   }
 
+  const normalize = (task) => task && { due: null, tags: [], ...task };
+
   return {
-    all: () => run('readonly', (s) => s.getAll()),
-    add: (title) => run('readwrite', (s) => s.add({ title, done: false, createdAt: Date.now() })),
-    get: (id) => run('readonly', (s) => s.get(id)),
+    all: async () => (await run('readonly', (s) => s.getAll())).map(normalize),
+    add: ({ title, due = null, tags = [] }) =>
+      run('readwrite', (s) => s.add({ title, due, tags, done: false, createdAt: Date.now() })),
+    get: async (id) => normalize(await run('readonly', (s) => s.get(id))),
     put: (task) => run('readwrite', (s) => s.put(task)),
     remove: (id) => run('readwrite', (s) => s.delete(id)),
   };

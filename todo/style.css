@@ -6,6 +6,7 @@
   --border: #dcdcd8;
   --accent: #2f6fdf;
   --danger: #c0392b;
+  --chip: #ececf4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,6 +18,7 @@
     --border: #3a3a3a;
     --accent: #6b9bff;
     --danger: #ff7a6b;
+    --chip: #33334a;
   }
 }
 
@@ -37,10 +39,19 @@ body {
 
 h1 { margin: 0 0 16px; font-size: 28px; }
 
-.new-task { display: flex; gap: 8px; }
+.new-task { display: flex; flex-direction: column; gap: 8px; }
+
+.new-task .row { display: flex; gap: 8px; }
+
+.new-task .extras { flex-wrap: wrap; }
+
+.field { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; }
+
+.field.grow { flex: 1; min-width: 180px; }
 
 .new-task input {
   flex: 1;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -81,7 +92,62 @@ button:focus-visible, input:focus-visible {
 
 .task input { width: 18px; height: 18px; accent-color: var(--accent); }
 
-.task label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
+.task-body { flex: 1; min-width: 0; }
+
+.task label { display: block; overflow-wrap: anywhere; cursor: pointer; }
+
+.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; font-size: 13px; }
+
+.due { color: var(--muted); }
+
+.due.overdue { color: var(--danger); font-weight: 600; }
+
+.due.today { color: var(--accent); font-weight: 600; }
+
+.tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.filters { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+.status-filter { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.status-filter button,
+.tag-toggle {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.status-filter button { padding: 6px 12px; }
+
+.status-filter button[aria-pressed="true"],
+.tag-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.count { opacity: 0.75; font-size: 13px; }
+
+.tag-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; }
+
+.tag-filter-label { color: var(--muted); }
+
+.tag-chips { display: contents; }
+
+.tag-toggle { padding: 3px 10px; border-radius: 999px; font-size: 13px; }
+
+button.link {
+  padding: 2px 4px;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
 
 .task.done label { color: var(--muted); text-decoration: line-through; }
 
