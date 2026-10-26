@@ -31,7 +31,7 @@ function git(...a) { return execFileSync('git', a, { encoding: 'utf8', stdio: ['
 function tryGit(...a) { try { return git(...a); } catch { return ''; } }
 function has(cmd) { return spawnSync(process.platform === 'win32' ? 'where' : 'which', [cmd], { stdio: 'ignore' }).status === 0; }
 function run(cmd, cmdArgs, cwd) {
-  // Windows needs a shell only for npm and .cmd shims; using one for real executables breaks paths with spaces.
+  // Windows needs a shell only for npm/.cmd shims; a shell breaks real executables whose paths have spaces.
   const shell = process.platform === 'win32' && (cmd === 'npm' || /\.cmd$/i.test(cmd));
   const r = spawnSync(cmd, cmdArgs, { cwd, encoding: 'utf8', shell });
   return { ok: r.status === 0, status: r.status, out: `${r.stdout || ''}${r.stderr || ''}`.trim() };
@@ -140,8 +140,7 @@ function checkSast(files) {
   add('SAST (built-in)', status, parts.length ? parts.join('; ') : 'no insecure patterns');
   if (has('semgrep')) {
     const r = run('semgrep', ['scan', '--config', 'p/javascript', '--config', 'p/secrets', '--error', '--quiet', '--metrics=off', ...scanned]);
-    // semgrep exits 1 for findings; any other non-zero code means the tool itself failed (not the code).
-    const status = r.ok ? 'PASS' : r.status === 1 ? 'FAIL' : 'WARN';
+    const status = r.ok ? 'PASS' : r.status === 1 ? 'FAIL' : 'WARN'; // exit 1 = findings; other codes = tool error
     add('SAST (semgrep)', status, r.ok ? 'no findings' : r.status === 1 ? lastLine(r.out) : `semgrep error (exit ${r.status}): ${lastLine(r.out)}`);
   }
 }
