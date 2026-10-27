@@ -1,24 +1,41 @@
+/* Color story "Ink & Indigo": calm slate neutrals, indigo only for actions and selection,
+   rose for urgent (overdue, High) and amber for soon (today, Medium). Text pairs meet WCAG AA (≥ 4.5:1). */
 :root {
-  --bg: #f6f6f4;
+  color-scheme: light dark; /* native controls (checkboxes, date picker) follow the theme */
+  --bg: #f4f5fb;
   --card: #ffffff;
-  --text: #1f1f1f;
-  --muted: #6b6b6b;
-  --border: #dcdcd8;
-  --accent: #2f6fdf;
-  --danger: #c0392b;
-  --chip: #ececf4;
+  --text: #1c2033;
+  --muted: #5b6478;
+  --border: #e2e5f0;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: #eef0ff;
+  --on-accent: #ffffff;
+  --danger: #be123c;
+  --danger-soft: #fff1f3;
+  --warn: #b45309;
+  --warn-soft: #fff7e6;
+  --chip: #f0f2f8;
+  --shadow: 0 1px 2px rgba(28, 32, 51, 0.05), 0 2px 8px rgba(28, 32, 51, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #161616;
-    --card: #222222;
-    --text: #ececec;
-    --muted: #9a9a9a;
-    --border: #3a3a3a;
-    --accent: #6b9bff;
-    --danger: #ff7a6b;
-    --chip: #33334a;
+    --bg: #0e1120;
+    --card: #171b2e;
+    --text: #e6e8f2;
+    --muted: #9aa3bd;
+    --border: #2a3150;
+    --accent: #a5b4fc;
+    --accent-hover: #c7d2fe;
+    --accent-soft: #262b52;
+    --on-accent: #11142a;
+    --danger: #fb7185;
+    --danger-soft: #3b1621;
+    --warn: #fbbf24;
+    --warn-soft: #382a0c;
+    --chip: #232842;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
   }
 }
 
@@ -37,9 +54,18 @@ body {
   padding: 0 16px;
 }
 
-h1 { margin: 0 0 16px; font-size: 28px; }
+h1 { margin: 0 0 20px; font-size: 30px; font-weight: 750; letter-spacing: -0.02em; }
 
-.new-task { display: flex; flex-direction: column; gap: 8px; }
+.new-task {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
 
 .new-task .row { display: flex; gap: 8px; }
 
@@ -54,23 +80,33 @@ h1 { margin: 0 0 16px; font-size: 28px; }
   min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--card);
   color: var(--text);
   font: inherit;
 }
 
-button {
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--accent);
-  color: #fff;
-  font: inherit;
-  cursor: pointer;
+.new-task input:focus, .field select:focus, .edit-form input:focus, .edit-form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
 }
 
-button:focus-visible, input:focus-visible {
+button {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+button:hover { background: var(--accent-hover); }
+
+button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -83,33 +119,45 @@ button:focus-visible, input:focus-visible {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-left: 4px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s;
 }
 
-.task input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.task:hover { border-color: var(--accent-soft); }
+
+/* Priority stripe on open tasks; browsers without :has() just keep the neutral stripe. */
+.task:not(.done):has(.priority-high) { border-left-color: var(--danger); }
+.task:not(.done):has(.priority-medium) { border-left-color: var(--warn); }
+
+.task.done { background: transparent; box-shadow: none; }
+.task.done .meta { opacity: 0.6; }
+
+.task input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
 
 .task-body { flex: 1; min-width: 0; }
 
-.task label { display: block; overflow-wrap: anywhere; cursor: pointer; }
+.task label { display: block; overflow-wrap: anywhere; cursor: pointer; font-weight: 500; }
 
-.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; font-size: 13px; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; }
 
 .due { color: var(--muted); }
 
 .due.overdue { color: var(--danger); font-weight: 600; }
 
-.due.today { color: var(--accent); font-weight: 600; }
+.due.today { color: var(--warn); font-weight: 600; }
 
-.repeat { color: var(--accent); }
+.repeat { color: var(--muted); }
 
 .field select {
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--card);
   color: var(--text);
   font: inherit;
@@ -119,31 +167,51 @@ button:focus-visible, input:focus-visible {
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--chip);
-  color: var(--text);
+  color: var(--muted);
   font-size: 12px;
 }
 
-.filters { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.filters { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
 
-.status-filter { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Status filter as a segmented control: the selected segment lifts onto a card. */
+.status-filter {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 3px;
+  flex-wrap: wrap;
+  background: var(--chip);
+  border-radius: 12px;
+}
 
 .status-filter button,
 .tag-toggle {
   background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
+  color: var(--muted);
+  border: 1px solid transparent;
+  font-weight: 500;
 }
 
-.status-filter button { padding: 6px 12px; }
+.status-filter button { padding: 6px 14px; border-radius: 9px; }
 
-.status-filter button[aria-pressed="true"],
-.tag-toggle[aria-pressed="true"] {
-  background: var(--accent);
+.status-filter button:hover, .tag-toggle:hover { background: transparent; color: var(--text); }
+
+.status-filter button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.tag-toggle { border-color: var(--border); }
+
+.tag-toggle[aria-pressed="true"],
+.tag-toggle[aria-pressed="true"]:hover {
+  background: var(--accent-soft);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent);
 }
 
-.count { opacity: 0.75; font-size: 13px; }
+.count { margin-left: 2px; opacity: 0.8; font-size: 12px; font-weight: 600; }
 
 .tag-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; }
 
@@ -160,16 +228,31 @@ button.link {
   text-decoration: underline;
 }
 
+button.link:hover { background: none; color: var(--accent-hover); }
+
 .task.done label { color: var(--muted); text-decoration: line-through; }
 
-.task .delete {
+/* Row actions are quiet ghost buttons that tint on hover, so the task text leads. */
+.task .delete, .task .edit {
   padding: 6px 10px;
   background: transparent;
-  color: var(--danger);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
 }
 
+.task .delete { color: var(--danger); }
+.task .delete:hover { background: var(--danger-soft); }
+
 .empty { color: var(--muted); text-align: center; margin-top: 24px; }
+
+/* Phones: give the title the full row and put Edit/Delete on a line underneath it. */
+@media (max-width: 480px) {
+  .app { margin: 24px auto; }
+  .task { flex-wrap: wrap; row-gap: 2px; }
+  .task-body { flex-basis: calc(100% - 40px); }
+  .task .edit { margin-left: 22px; }
+}
 
 .task-counts { margin-top: 16px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; text-align: right; }
 
@@ -184,15 +267,17 @@ button.link {
 
 /* Priority badges (ticket #16) */
 .priority { padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.priority-high { background: var(--danger); color: #fff; }
-.priority-medium { background: var(--chip); color: var(--text); }
-.priority-low { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.priority-high { background: var(--danger-soft); color: var(--danger); }
+.priority-medium { background: var(--warn-soft); color: var(--warn); }
+.priority-low { background: var(--chip); color: var(--muted); }
 
 /* Inline edit form */
-.task .edit { padding: 6px 10px; background: transparent; color: var(--accent); border: 1px solid var(--border); }
+.task .edit { color: var(--accent); }
+.task .edit:hover { background: var(--accent-soft); }
 .edit-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
 .edit-form .edit-title { flex: 1 1 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; }
 .edit-form input, .edit-form select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; }
 .edit-form .cancel { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.edit-form .cancel:hover { background: var(--chip); }
 .edit-error { flex-basis: 100%; margin: 0; color: var(--danger); font-size: 13px; min-height: 0; }
 .edit-error:empty { display: none; }
