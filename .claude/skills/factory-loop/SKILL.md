@@ -136,7 +136,7 @@ Leave the ticket open. Don't build until there is an approval.
 1. Serve the project: `node .claude/tools/serve.js <project-folder> 8780` (run it in the background).
 2. Use the `chrome-devtools` MCP tools to open `http://localhost:8780/`. For **each acceptance check**, do it for real: fill inputs, click, reload to test persistence.
 3. Check the console messages and failed network requests. Any error means a failing check: fix it and re-verify.
-4. Take a screenshot per key state with the screenshot tool, saving to `<project>/screenshots/ticket-<N>-<nn>-<what>.png` (for example `ticket-4-01-empty.png` or `ticket-4-02-added.png`).
+4. Take a screenshot per key state with the screenshot tool, saving it to the **scratchpad** (outside the repo) as `shots/ticket-<N>-<nn>-<what>.png` (for example `ticket-4-01-empty.png`). **Never commit screenshots**: they are attached to the PR with `gh --attach` (step 5).
 5. Stop the server when done.
 
 If the chrome-devtools tools are unavailable, don't open the PR for review yet. Commit and push the build to the ticket branch as `Ticket #<N>: ...`, then post a `factory:building` comment. It should give the SHA, the results of any headless fallback checks (clearly labelled as headless, not browser-verified), and a note that browser verification and screenshots will follow once the MCP server is connected. Never claim browser verification that didn't happen.
@@ -144,7 +144,7 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
 ### 5. Commit, push, open the PR (stage `review`)
 
 1. Re-run the quality gate (`node .claude/tools/quality-gate.js --base main`). **No PR while any check is ❌.** Then self-review the diff against the engineering-standards §5 checklist and fix what it finds.
-2. On the ticket branch, commit the project, tests, screenshots and `CLAUDE.md` together as `Ticket #<N>: <summary>`, then push the branch.
+2. On the ticket branch, commit the project, tests and `CLAUDE.md` together as `Ticket #<N>: <summary>` (no screenshots), then push the branch.
 3. Get the repo name and SHA: `gh repo view --json nameWithOwner -q .nameWithOwner` and `git rev-parse HEAD`.
 4. Open the PR (see **Branches and pull requests**). Fill in every section of `.github/pull_request_template.md`:
    - what was built and where
@@ -152,7 +152,7 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
    - the TDD evidence and the test command result
    - the security notes and threat model
    - the **quality gate table**, with any ⚠️ explained
-   - the screenshots, embedded as `![<what>](https://github.com/<owner>/<repo>/blob/<sha>/<path>?raw=true)`
+   - the screenshots, referenced in the body file as `![<what>](./shots/<file>.png)` (paths relative to the body file) and uploaded by passing each one as `--attach <file>` to `gh pr create` / `gh pr edit` (gh ≥ 2.99). gh rewrites the references to `user-attachments` URLs. The same flag works on `gh issue comment` and `gh pr comment`
    - risks and rollback
    - `Closes #<N>`
    The PR opens as a **draft**. CI re-runs the gate with gitleaks, osv-scanner and semgrep, runs the unit and browser tests, and CodeQL scans the code. If CI fails, fix it on the branch.

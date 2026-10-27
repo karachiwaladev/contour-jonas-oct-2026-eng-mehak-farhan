@@ -51,7 +51,7 @@ README.md                 # workshop info and scoring
 <name>/                   # one top-level folder per project
   README.md               # layer-2 entry point for that project
   tests/                  # node --test unit tests (TDD)
-  screenshots/            # verification screenshots, ticket-<N>-*.png
+  screenshots/            # older tickets only; new screenshots are attached to the PR (gh --attach), never committed
 ```
 
 ## Adding a project
