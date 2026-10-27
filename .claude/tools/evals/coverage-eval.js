@@ -1,9 +1,10 @@
 // Coverage eval: after a ticket, checks out the ticket's final code in a temporary git worktree, measures unit and
 // browser coverage there, and grades every source file the ticket changed (≥ 80% required, 90% target).
 // Runs when a ticket closes (GitHub Actions) or by hand. The working checkout is never touched.
-// Usage: node .claude/tools/evals/coverage-eval.js <ticket> [--post] [--unit-only] [--json <file>]
-//   --post       post the scorecard on the ticket
+// Usage: node .claude/tools/evals/coverage-eval.js <ticket> [--post] [--unit-only] [--json <file>] [--md <file>]
+//   --post       post the scorecard on the ticket (by hand; CI posts from a separate job, see coverage-eval.yml)
 //   --unit-only  skip browser coverage (faster; unit coverage only)
+//   --md         also write the scorecard markdown to a file
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -15,10 +16,13 @@ const { renderMarkdown, summarize } = require('./report');
 const { findNode, findTestFiles } = require('../run-tests');
 const { isTrustedPR, safeEnv } = require('./safety');
 
-const args = process.argv.slice(2);
-const N = Number(args.find((a) => /^\d+$/.test(a)));
-const POST = args.includes('--post'), UNIT_ONLY = args.includes('--unit-only');
-const JSON_OUT = args.includes('--json') ? args[args.indexOf('--json') + 1] : null;
+function parseArgs(argv) {
+  const value = (flag) => (argv.includes(flag) ? argv[argv.indexOf(flag) + 1] : null);
+  return { n: Number(argv.find((a) => /^\d+$/.test(a))) || 0, post: argv.includes('--post'),
+    unitOnly: argv.includes('--unit-only'), jsonOut: value('--json'), mdOut: value('--md') };
+}
+
+const { n: N, post: POST, unitOnly: UNIT_ONLY, jsonOut: JSON_OUT, mdOut: MD_OUT } = parseArgs(process.argv.slice(2));
 const SOURCE = /\.[cm]?[jt]sx?$/;
 
 // Where the ticket's code landed: squash-merge commits on the default branch, else the latest TRUSTED open PR's
@@ -82,7 +86,7 @@ function grade(sources, unit, browser) {
 }
 
 function main() {
-  if (!N) { console.error('Usage: node .claude/tools/evals/coverage-eval.js <ticket> [--post] [--unit-only] [--json <file>]'); return 2; }
+  if (!N) { console.error('Usage: node .claude/tools/evals/coverage-eval.js <ticket> [--post] [--unit-only] [--json <file>] [--md <file>]'); return 2; }
   const ticket = github.getTicket(N), prs = github.ticketPRs(N);
   wt.git(['fetch', '-q', 'origin']);
   const code = locateCode(prs, github.defaultBranch(), N);
@@ -113,6 +117,7 @@ function main() {
   const md = renderMarkdown({ ticket: N, title: ticket.title, prs, rows, base, head: code.head, notes });
   console.log(md);
   if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ ticket: N, summary: summarize(rows), rows }, null, 2));
+  if (MD_OUT) fs.writeFileSync(MD_OUT, md);
   if (POST) {
     const file = path.join(os.tmpdir(), `ticket-${N}-coverage-eval.md`);
     fs.writeFileSync(file, md);
@@ -121,6 +126,6 @@ function main() {
   return rows.some((r) => r.status === 'FAIL') ? 1 : 0;
 }
 
-module.exports = { locateCode, grade, changedSources, unitCoverage };
+module.exports = { locateCode, grade, changedSources, unitCoverage, parseArgs };
 
 if (require.main === module) process.exitCode = main();

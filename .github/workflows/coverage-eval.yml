@@ -2,6 +2,9 @@ name: Coverage eval
 
 # Measures coverage of the files a finished ticket changed and posts the scorecard on it. Runs when a "Ticket ..."
 # issue is closed as completed, or on demand: Actions -> Coverage eval -> Run workflow -> ticket number.
+# Two jobs, so the job that runs a ticket's tests never holds a token that can write (ticket #28):
+#   eval  checks out the code and runs the tests with a read-only token, then uploads the scorecard as a file;
+#   post  has issues: write but never checks out or runs any code; it only posts that file on the ticket.
 on:
   issues:
     types: [closed]
@@ -11,15 +14,14 @@ on:
         description: 'Ticket (issue) number to evaluate'
         required: true
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: read
-
 jobs:
   eval:
     if: github.event_name == 'workflow_dispatch' || (github.event.issue.state_reason == 'completed' && startsWith(github.event.issue.title, 'Ticket'))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -30,13 +32,13 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run coverage eval and post the scorecard
+      - name: Run coverage eval (read-only token)
         env:
           GH_TOKEN: ${{ github.token }}
           BROWSER: /usr/bin/google-chrome
           TICKET: ${{ github.event.issue.number || inputs.ticket }}
         run: |
-          node .claude/tools/evals/coverage-eval.js "$TICKET" --post --json eval.json | tee -a "$GITHUB_STEP_SUMMARY"
+          node .claude/tools/evals/coverage-eval.js "$TICKET" --json eval.json --md eval.md | tee -a "$GITHUB_STEP_SUMMARY"
           exit ${PIPESTATUS[0]}
 
       - name: Keep the results
@@ -44,5 +46,28 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-eval
-          path: eval.json
+          path: |
+            eval.json
+            eval.md
           if-no-files-found: ignore
+
+  post:
+    needs: eval
+    # Post even when a file scored FAIL (the eval job exits 1 then), but not when the eval was skipped or cancelled.
+    if: always() && (needs.eval.result == 'success' || needs.eval.result == 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true # no artifact when there was nothing to measure
+        with:
+          name: coverage-eval
+
+      - name: Post the scorecard on the ticket
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TICKET: ${{ github.event.issue.number || inputs.ticket }}
+        run: |
+          if [ -f eval.md ]; then gh issue comment "$TICKET" --body-file eval.md; else echo "No scorecard to post."; fi
