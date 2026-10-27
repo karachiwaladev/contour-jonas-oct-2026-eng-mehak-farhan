@@ -31,7 +31,7 @@ Arguments (`$ARGUMENTS`):
 
 ## 1. Prepare
 
-1. Check that the chrome-devtools tools are loaded: call `list_pages`. If they aren't loaded, stop and ask the owner to connect the MCP (`/mcp`). Never fall back to claiming results.
+1. Check that the chrome-devtools tools are loaded: call `list_pages`. If they aren't loaded, stop and ask the owner to connect the MCP (`/mcp`). Never fall back to claiming results. If it fails with "The browser is already running for …chrome-profile", another session holds the shared browser profile. Ask the owner to add `--isolated` to the chrome-devtools MCP args (so each session gets its own temporary profile), then reconnect with `/mcp`.
 2. Serve the project in the background: `node .claude/tools/serve.js <project> 8790`. Check it with `curl -s -o /dev/null -w "%{http_code}" http://localhost:8790/`, which must return `200`.
 3. Read `<project>/README.md` and pick its main flows: the features list. Every subagent gets the same flows.
 4. Make the screenshot folder `<scratchpad>/persona-test/`. Screenshots are **never committed**.
