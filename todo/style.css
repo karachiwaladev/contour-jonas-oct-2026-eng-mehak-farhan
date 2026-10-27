@@ -1,41 +1,54 @@
-/* Color story "Ink & Indigo": calm slate neutrals, indigo only for actions and selection,
-   rose for urgent (overdue, High) and amber for soon (today, Medium). Text pairs meet WCAG AA (≥ 4.5:1). */
+/* Color story "Sorbet" (pastel): lavender for actions and selection, pink for urgent (overdue, High),
+   peach for soon (today, Medium), mint for calm (Low). Pastels fill surfaces, badges and stripes; text stays
+   dark enough to meet WCAG AA (≥ 4.5:1), and buttons are pastel fills with dark text. */
 :root {
   color-scheme: light dark; /* native controls (checkboxes, date picker) follow the theme */
-  --bg: #f4f5fb;
+  --bg: #f8f5ff;
   --card: #ffffff;
-  --text: #1c2033;
-  --muted: #5b6478;
-  --border: #e2e5f0;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-soft: #eef0ff;
-  --on-accent: #ffffff;
-  --danger: #be123c;
-  --danger-soft: #fff1f3;
-  --warn: #b45309;
-  --warn-soft: #fff7e6;
-  --chip: #f0f2f8;
-  --shadow: 0 1px 2px rgba(28, 32, 51, 0.05), 0 2px 8px rgba(28, 32, 51, 0.06);
+  --text: #2e2a3d;
+  --muted: #6b6480;
+  --border: #ece6f7;
+  --accent: #5b4fc4;
+  --accent-fill: #d6ceff;
+  --accent-fill-hover: #c6bbff;
+  --accent-soft: #f1eeff;
+  --on-accent: #2a2350;
+  --danger: #b8325f;
+  --danger-soft: #ffe4ee;
+  --warn: #9a5508;
+  --warn-soft: #ffedd5;
+  --calm: #2c7356;
+  --calm-soft: #dcf5e8;
+  --stripe-high: #f5a9c4;
+  --stripe-medium: #fbcf96;
+  --stripe-low: #a9dfc5;
+  --chip: #f3f0fa;
+  --shadow: 0 1px 2px rgba(46, 42, 61, 0.04), 0 4px 12px rgba(91, 79, 196, 0.07);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1120;
-    --card: #171b2e;
-    --text: #e6e8f2;
-    --muted: #9aa3bd;
-    --border: #2a3150;
-    --accent: #a5b4fc;
-    --accent-hover: #c7d2fe;
-    --accent-soft: #262b52;
-    --on-accent: #11142a;
-    --danger: #fb7185;
-    --danger-soft: #3b1621;
-    --warn: #fbbf24;
-    --warn-soft: #382a0c;
-    --chip: #232842;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+    --bg: #15131f;
+    --card: #1f1c2c;
+    --text: #ece8f7;
+    --muted: #a9a2c0;
+    --border: #332e47;
+    --accent: #c9beff;
+    --accent-fill: #c9beff;
+    --accent-fill-hover: #dad2ff;
+    --accent-soft: #2c2648;
+    --on-accent: #1c1730;
+    --danger: #f9a8c4;
+    --danger-soft: #3d2030;
+    --warn: #fcd29a;
+    --warn-soft: #3b2c16;
+    --calm: #a3e4c6;
+    --calm-soft: #183428;
+    --stripe-high: #f5a9c4;
+    --stripe-medium: #fbcf96;
+    --stripe-low: #a9dfc5;
+    --chip: #2a263a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.25);
   }
 }
 
@@ -96,7 +109,7 @@ button {
   padding: 10px 18px;
   border: 0;
   border-radius: 10px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
   font: inherit;
   font-weight: 600;
@@ -104,7 +117,7 @@ button {
   transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
-button:hover { background: var(--accent-hover); }
+button:hover { background: var(--accent-fill-hover); }
 
 button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--accent);
@@ -132,8 +145,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .task:hover { border-color: var(--accent-soft); }
 
 /* Priority stripe on open tasks; browsers without :has() just keep the neutral stripe. */
-.task:not(.done):has(.priority-high) { border-left-color: var(--danger); }
-.task:not(.done):has(.priority-medium) { border-left-color: var(--warn); }
+.task:not(.done):has(.priority-high) { border-left-color: var(--stripe-high); }
+.task:not(.done):has(.priority-medium) { border-left-color: var(--stripe-medium); }
+.task:not(.done):has(.priority-low) { border-left-color: var(--stripe-low); }
 
 .task.done { background: transparent; box-shadow: none; }
 .task.done .meta { opacity: 0.6; }
@@ -228,7 +242,7 @@ button.link {
   text-decoration: underline;
 }
 
-button.link:hover { background: none; color: var(--accent-hover); }
+button.link:hover { background: none; color: var(--on-accent); }
 
 .task.done label { color: var(--muted); text-decoration: line-through; }
 
@@ -269,7 +283,7 @@ button.link:hover { background: none; color: var(--accent-hover); }
 .priority { padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .priority-high { background: var(--danger-soft); color: var(--danger); }
 .priority-medium { background: var(--warn-soft); color: var(--warn); }
-.priority-low { background: var(--chip); color: var(--muted); }
+.priority-low { background: var(--calm-soft); color: var(--calm); }
 
 /* Inline edit form */
 .task .edit { color: var(--accent); }
