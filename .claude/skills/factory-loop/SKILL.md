@@ -16,7 +16,7 @@ Tickets arrive as GitHub issues in this repo. This loop turns each one into **fi
 - Follow `CLAUDE.md`: one top-level folder per project, with a README, and one index row in `CLAUDE.md`.
 - **Follow the `engineering-standards` skill for all code.** Load it before planning or building. It covers security by design, TDD, the design limits (no god objects), the quality gate and the PR self-review. Use the **`testing`** skill's tools to write and run tests, and the **`pr-review`** skill to review every PR before it goes to the owner.
 - **Every repo change goes through a pull request.** Work on a ticket branch, open a PR to `main`, ask the repo owner to review it, and **never merge until they explicitly say so**. Don't commit ticket work to `main`. See **Branches and pull requests**.
-- Only what is on GitHub counts. The Stop hook (`.claude/hooks/on-stop.sh`) commits anything left uncommitted at the end of every turn and pushes the *current branch*. So stay on the ticket branch while working, and make explicit `Ticket #<N>: ...` commits, because comments need the SHA.
+- Only what is on GitHub counts. At the end of every turn, the Stop hook (`.claude/hooks/on-stop.sh`) commits **only the files this session edited** with Edit or Write, plus the session's prompt log, and pushes the *current branch*. On `main` it commits only the prompt log. Files created through the shell (screenshots, generated files) are never auto-committed. So stay on the ticket branch while working, and make explicit `Ticket #<N>: ...` commits, because comments need the SHA.
 
 ## Conversation state lives in the ticket
 
@@ -164,7 +164,8 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
 ## Branches and pull requests
 
 **Branch.** Use one branch per ticket: `ticket-<N>-<short-slug>`, for example `ticket-5-filters-tags`.
-- New branch: `git switch main`, then `git pull --ff-only`, then `git switch -c ticket-<N>-<slug>`.
+- **Check the checkout is free first.** If `git status --porcelain` shows changes this session didn't make, another session or the owner is working here. Don't switch branches. Work in a worktree instead: `git worktree add <scratchpad>/ticket-<N> -b ticket-<N>-<slug> origin/main` (or `<scratchpad>/ticket-<N> ticket-<N>-<slug>` for an existing branch), and run every command from there.
+- New branch: `git fetch origin`, then `git switch -c ticket-<N>-<slug> origin/main`, so a local `main` that has diverged doesn't matter. Push with `git push -u origin ticket-<N>-<slug>`.
 - Existing branch (revisions, review fixes): `git switch ticket-<N>-<slug>`, then `git pull --ff-only`.
 - When the ticket's work for this run is pushed, switch back: `git switch main`.
 - Never rebase, force-push or delete branches.

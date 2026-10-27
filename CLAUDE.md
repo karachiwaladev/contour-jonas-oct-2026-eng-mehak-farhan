@@ -35,8 +35,8 @@ Rules that follow from this:
 - All code follows the `engineering-standards` skill: a security section and threat model in each plan,
   TDD, no god objects (code files ≤ 200 lines), and small PRs. `quality-gate.js` must pass before a PR, and CI re-runs it
   (plus gitleaks, semgrep and CodeQL). The `testing` skill holds the test tools, and the `pr-review` skill auto-reviews each draft PR before handover.
-- The Stop hook logs prompts to `.claude/prompts.jsonl`, holds back files that look like secrets,
-  then commits and pushes the current branch.
+- The Stop hook logs prompts to `.claude/prompts/<session>.<branch>.jsonl`, then commits only the files
+  this session edited (on `main`, only its log), holds back secrets, and pushes. See `.claude/hooks/stop-scope.js`.
 
 ## Repo layout
 
