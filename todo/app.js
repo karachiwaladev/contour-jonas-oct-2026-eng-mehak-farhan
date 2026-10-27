@@ -8,6 +8,7 @@ const priorityInput = document.getElementById('task-priority');
 const list = document.getElementById('task-list');
 const empty = document.getElementById('empty');
 const status = document.getElementById('status');
+const countsFooter = document.getElementById('task-counts');
 const filterEls = {
   statusButtons: [...document.querySelectorAll('[data-status]')],
   priorityButtons: [...document.querySelectorAll('[data-priority]')],
@@ -39,6 +40,7 @@ async function refresh() {
     saveFilters();
   }
   Render.renderFilters(filterEls, tasks, filters);
+  Render.renderCounts(countsFooter, tasks);
   const visible = tasks.filter((t) => Filters.matchesFilters(t, filters)).sort(Filters.compareTasks);
   const now = new Date();
   list.replaceChildren(...visible.map((t) => Render.renderTask(t, now)));

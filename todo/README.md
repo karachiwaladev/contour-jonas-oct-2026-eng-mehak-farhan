@@ -25,11 +25,13 @@ database (IndexedDB), so they persist across reloads with no server.
   are remembered after a reload. Older tasks without a priority count as Medium. Recurring tasks keep their priority.
 - **Edit:** each task has an **Edit** button that opens an inline form for its title, due date, tags, repeat and
   priority, with **Save** and **Cancel**. An empty title is rejected.
+- **Task counts:** a footer under the list shows totals for all tasks, e.g. "3 open · 5 done". Filters don't change
+  it, a completed recurring occurrence counts as done, and it updates on every add, tick, edit and delete.
 
 ## Tests
 
 - Unit tests: `cd todo && npm test` (uses Node 18+ automatically via `.claude/tools/run-tests.js`)
-- Browser tests: `node .claude/tools/browser-test.js` (app, recurring and error-path suites)
+- Browser tests: `node .claude/tools/browser-test.js` (app, recurring, priority, edit, counts and error-path suites)
 - Coverage: `cd todo && npm run coverage` gives unit coverage, then browser line coverage per file (100% at last run)
 - Error paths are tested for real: `tests/browser/errors.test.html` makes IndexedDB fail and checks the user sees a message
 
@@ -45,7 +47,7 @@ Serving the folder also works, e.g. `npx serve todo`.
 | `index.html` | Page markup |
 | `db.js` | IndexedDB wrapper (`TaskDB.all/add/get/put/remove`) |
 | `app.js` | Event wiring: add, toggle (creates the next recurring occurrence), delete, filters |
-| `filters.js` | Pure logic: tag parsing, sorting, filtering, due labels, saved-filter loading |
+| `filters.js` | Pure logic: tag parsing, sorting, filtering, due labels, saved-filter loading, task counts |
 | `recurrence.js` | Pure logic: repeat patterns, next due date, next occurrence |
 | `render.js` | DOM building (`textContent` only) |
 | `priority.js` | Pure logic: priority levels, allowlist, sort rank, labels |

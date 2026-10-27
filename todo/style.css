@@ -171,6 +171,8 @@ button.link {
 
 .empty { color: var(--muted); text-align: center; margin-top: 24px; }
 
+.task-counts { margin-top: 16px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; text-align: right; }
+
 .visually-hidden {
   position: absolute;
   width: 1px;

@@ -85,7 +85,17 @@ const Filters = (() => {
     }
   }
 
-  return { parseTags, dueInfo, compareTasks, matchesFilters, allTags, pruneTags, loadFilters, safeStorage, saveFilters };
+  // Open/done totals over all tasks (filters don't apply). Stored tasks are untrusted: only done === true is done,
+  // and anything that isn't an object is skipped.
+  function taskCounts(tasks) {
+    const valid = (Array.isArray(tasks) ? tasks : []).filter((t) => t && typeof t === 'object');
+    const done = valid.filter((t) => t.done === true).length;
+    return { open: valid.length - done, done };
+  }
+
+  const countsLabel = ({ open, done }) => `${open} open · ${done} done`;
+
+  return { parseTags, dueInfo, compareTasks, matchesFilters, allTags, pruneTags, loadFilters, safeStorage, saveFilters, taskCounts, countsLabel };
 })();
 
 if (typeof module !== 'undefined') module.exports = Filters;
