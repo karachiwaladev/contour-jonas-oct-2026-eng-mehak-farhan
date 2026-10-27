@@ -5,3 +5,6 @@
 *.pem
 *.key
 node_modules/
+
+# Verification screenshots are attached to PRs (gh --attach), never committed
+*/screenshots/ticket-*.png

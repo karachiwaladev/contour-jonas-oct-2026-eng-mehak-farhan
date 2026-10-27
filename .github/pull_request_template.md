@@ -32,7 +32,7 @@ Closes #
 
 ## Screenshots
 
-<!-- UI changes: embed screenshots from the project's screenshots/ folder. -->
+<!-- UI changes: attach screenshots with `gh pr create/edit --attach <file>` (or drag them in). Don't commit them. -->
 
 ## Risks and rollback
 
