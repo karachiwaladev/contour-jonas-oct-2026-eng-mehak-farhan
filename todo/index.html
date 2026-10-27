@@ -48,6 +48,10 @@
     </form>
 
     <section class="filters" aria-label="Filters">
+      <div class="search">
+        <label for="search" class="visually-hidden">Search tasks by title or tag</label>
+        <input id="search" type="search" placeholder="Search by title or tag" maxlength="200" autocomplete="off">
+      </div>
       <div class="status-filter" role="group" aria-label="Show">
         <button type="button" data-status="all" aria-pressed="true">All <span class="count" data-count="all"></span></button>
         <button type="button" data-status="open" aria-pressed="false">Incomplete <span class="count" data-count="open"></span></button>
@@ -78,6 +82,7 @@
   <script src="db.js"></script>
   <script src="priority.js"></script>
   <script src="filters.js"></script>
+  <script src="search.js"></script>
   <script src="recurrence.js"></script>
   <script src="render.js"></script>
   <script src="editor.js"></script>

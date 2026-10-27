@@ -1,0 +1,90 @@
+<!doctype html>
+<!-- Search (ticket #30): live title/tag search, all words must match, combines with filters, clears, not saved.
+     Run: node .claude/tools/browser-test.js todo/tests/browser/search.test.html -->
+<html><head><meta charset="utf-8"><title>search browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+const titles = () => T.$$('.task label').map((l) => l.textContent).sort();
+const same = (want) => JSON.stringify(titles()) === JSON.stringify([...want].sort());
+const shows = (want, label) => T.until(() => same(want), `${label}: want ${want.join(', ')} (got ${titles().join(', ')})`);
+const search = (text) => T.fill('#search', text);
+const ALL = ['Buy milk', 'Ship the quarterly report', 'Write report', 'Oat milk latte'];
+async function add(title, tags = '') {
+  T.fill('#task-title', title); T.fill('#task-tags', tags);
+  T.submit('#new-task');
+  await T.until(() => T.$$('.task label').some((l) => l.textContent === title), `"${title}" to appear`);
+}
+
+T.test('1. a labelled search box filters by title as you type', async () => {
+  await T.open('/todo/index.html');
+  await T.until(() => T.$('#search'), 'search box');
+  T.expect(T.$('#search').type === 'search' && T.$('label[for="search"]'), 'search input with a label');
+  await add('Buy milk', 'home'); await add('Ship the quarterly report', 'work, finance');
+  await add('Write report', 'home'); await add('Oat milk latte', 'cafe');
+  search('milk');
+  await shows(['Buy milk', 'Oat milk latte'], 'title match');
+});
+
+T.test('2. a word can match a tag', async () => {
+  search('finance');
+  await shows(['Ship the quarterly report'], 'tag match');
+});
+
+T.test('3. every word must match (title or tag), ignoring case', async () => {
+  search('REPORT work');
+  await shows(['Ship the quarterly report'], 'all words');
+});
+
+T.test('4. search combines with the status, tag and priority filters', async () => {
+  search('report');
+  await shows(['Ship the quarterly report', 'Write report'], 'two reports');
+  const box = T.$$('.task').find((li) => li.querySelector('label').textContent === 'Write report').querySelector('input');
+  T.check(`#${box.id}`);
+  await T.until(() => T.$$('.task.done').length === 1, 'ticked');
+  T.click('[data-status="done"]');
+  await shows(['Write report'], 'search + Completed');
+  T.click('[data-status="all"]');
+  T.click('[data-tag="home"]');
+  await shows(['Write report'], 'search + tag');
+  T.click('#clear-tags');
+  T.click('.priority-toggle[data-priority="high"]');
+  await shows([], 'search + High (none)');
+  T.click('.priority-toggle[data-priority="high"]');
+  await shows(['Ship the quarterly report', 'Write report'], 'filters cleared');
+});
+
+T.test('5. clearing the box (text or Escape) shows everything again', async () => {
+  search('');
+  await shows(ALL, 'empty text');
+  search('milk');
+  await shows(['Buy milk', 'Oat milk latte'], 'milk again');
+  T.$('#search').dispatchEvent(new (T.win().KeyboardEvent)('keydown', { key: 'Escape', bubbles: true }));
+  await shows(ALL, 'after Escape');
+  T.expect(T.$('#search').value === '', 'Escape empties the box');
+});
+
+T.test('6. no matches shows the "no tasks match" message', async () => {
+  search('zzz');
+  await shows([], 'no match');
+  T.expect(!T.$('#empty').hidden && T.$('#empty').textContent === 'No tasks match these filters.', T.$('#empty').textContent);
+});
+
+T.test('7. counts ignore the search', async () => {
+  search('milk');
+  await shows(['Buy milk', 'Oat milk latte'], 'milk');
+  T.expect(T.$('#task-counts').textContent === '3 open · 1 done', `footer: ${T.$('#task-counts').textContent}`);
+  T.expect(T.$('[data-count="all"]').textContent === '4', `All count: ${T.$('[data-count="all"]').textContent}`);
+});
+
+T.test('8. after a reload the search is empty but other filters are remembered', async () => {
+  T.click('[data-status="open"]');
+  await shows(['Buy milk', 'Oat milk latte'], 'milk + open');
+  await T.reload();
+  await T.until(() => T.$('#search'), 'reloaded');
+  T.expect(T.$('#search').value === '', 'search starts empty');
+  await shows(['Buy milk', 'Ship the quarterly report', 'Oat milk latte'], 'Incomplete filter remembered');
+});
+</script>
+</body></html>

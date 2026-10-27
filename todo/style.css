@@ -125,6 +125,16 @@ button:focus-visible, input:focus-visible {
 
 .filters { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
 
+.search input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+}
+
 .status-filter { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .status-filter button,
