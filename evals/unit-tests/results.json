@@ -1,13 +1,24 @@
 {
   "eval": "unit-tests",
-  "ticket": 28,
-  "score": null,
-  "passed": 0,
-  "total": 0,
+  "ticket": 30,
+  "score": 50,
+  "passed": 1,
+  "total": 2,
   "prs": [
-    31
+    33
   ],
-  "head": "4d23a18eb3d661749e774d4a8fc66be94408a130",
-  "cases": [],
-  "generatedAt": "2026-10-27T07:14:58.728Z"
+  "head": "ddf2bfdefeace173589ef5da0ed4e859ccf8f690",
+  "cases": [
+    {
+      "id": "todo/app.js",
+      "pass": false,
+      "detail": "no unit test loads this file (browser tests only, or untested)"
+    },
+    {
+      "id": "todo/search.js",
+      "pass": true,
+      "detail": "unit line coverage 100% (needs 80%)"
+    }
+  ],
+  "generatedAt": "2026-10-27T07:32:35.237Z"
 }

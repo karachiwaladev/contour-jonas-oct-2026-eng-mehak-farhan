@@ -65,7 +65,7 @@ README.md                 # workshop info and scoring
 
 | Project | Path | Summary | Ticket |
 |---|---|---|---|
-| Todo app | [`todo/`](todo/README.md) | Browser todo list on IndexedDB: due dates, tags, filters, recurring tasks, priority, editing, task counts | #4, #5, #6, #16, #22 |
+| Todo app | [`todo/`](todo/README.md) | Browser todo list on IndexedDB: due dates, tags, filters, recurring tasks, priority, editing, task counts, search | #4, #5, #6, #16, #22, #30 |
 
 ## Ground rules
 

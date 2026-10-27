@@ -1,4 +1,4 @@
-// Wires the todo page together: events -> TaskDB (db.js) -> Filters / Recurrence / Priority -> Render / Editor.
+// Wires the todo page together: events -> TaskDB (db.js) -> Filters / Search / Recurrence / Priority -> Render / Editor.
 const form = document.getElementById('new-task');
 const input = document.getElementById('task-title');
 const dueInput = document.getElementById('task-due');
@@ -9,6 +9,7 @@ const list = document.getElementById('task-list');
 const empty = document.getElementById('empty');
 const status = document.getElementById('status');
 const countsFooter = document.getElementById('task-counts');
+const searchInput = document.getElementById('search');
 const filterEls = {
   statusButtons: [...document.querySelectorAll('[data-status]')],
   priorityButtons: [...document.querySelectorAll('[data-priority]')],
@@ -20,6 +21,7 @@ const filterEls = {
 const FILTER_KEY = 'todo-filters';
 const storage = Filters.safeStorage(window);
 const filters = Filters.loadFilters(storage, FILTER_KEY);
+let searchWords = []; // kept in memory only, never saved: a reload starts with an empty search
 
 function saveFilters() {
   Filters.saveFilters(storage, filters, FILTER_KEY);
@@ -41,7 +43,8 @@ async function refresh() {
   }
   Render.renderFilters(filterEls, tasks, filters);
   Render.renderCounts(countsFooter, tasks);
-  const visible = tasks.filter((t) => Filters.matchesFilters(t, filters)).sort(Filters.compareTasks);
+  const visible = tasks.filter((t) => Filters.matchesFilters(t, filters) && Search.matchesSearch(t, searchWords))
+    .sort(Filters.compareTasks);
   const now = new Date();
   list.replaceChildren(...visible.map((t) => Render.renderTask(t, now)));
   empty.hidden = visible.length > 0;
@@ -155,6 +158,18 @@ filterEls.tagChips.addEventListener('click', (e) => {
 });
 
 filterEls.clearTags.addEventListener('click', () => setFilters({ tags: [] }));
+
+function setSearch(text) {
+  searchWords = Search.parseQuery(text);
+  refresh().catch(reportError('load tasks'));
+}
+
+searchInput.addEventListener('input', () => setSearch(searchInput.value));
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  searchInput.value = '';
+  setSearch('');
+});
 
 refresh().catch((err) => {
   announce('Could not open the local database: ' + err.message); // kept verbatim: shown on first load
