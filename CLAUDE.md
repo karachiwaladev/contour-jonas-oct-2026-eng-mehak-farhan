@@ -34,7 +34,7 @@ Rules that follow from this:
   It is **never merged without the owner's explicit go-ahead**, and `gh pr merge` always prompts.
 - All code follows the `engineering-standards` skill: a security section and threat model in each plan,
   TDD, no god objects (code files ≤ 200 lines), and small PRs. `quality-gate.js` must pass before a PR, and CI re-runs it
-  (plus gitleaks, semgrep and CodeQL). The `testing` skill holds the test tools, and the `pr-review` skill auto-reviews each draft PR before handover.
+  (plus gitleaks, osv-scanner, semgrep and CodeQL: the one list of CI scanners). The `testing` skill holds the test tools, and the `pr-review` skill auto-reviews each draft PR before handover.
 - The Stop hook logs prompts to `.claude/prompts/<session>.<branch>.jsonl`, then commits only the files
   this session edited (on `main`, only its log), holds back secrets, and pushes. See `.claude/hooks/stop-scope.js`.
 
@@ -72,3 +72,5 @@ README.md                 # workshop info and scoring
 - Training repo only: no Jonas or Contour code, and no real keys or secrets.
 - Answer questions with sources, and say when a figure comes from memory.
 - Keep commits small and tied to a ticket.
+- Before saying a tool can't do something, check `<tool> --help` or the docs, and cite what you found.
+- Restate the scope in one line before building, and build only that. When you change a skill, explain each change in one line (what and why).
