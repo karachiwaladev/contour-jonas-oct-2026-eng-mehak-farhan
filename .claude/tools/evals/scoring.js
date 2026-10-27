@@ -13,8 +13,8 @@ function unitTestCases(sources, unit) {
   });
 }
 
-// Images, screenshots, the prompt log and documentation don't carry code risk.
-const IGNORED = /(^|\/)screenshots\/|^\.claude\/prompts\.jsonl$|\.(png|jpe?g|gif|svg|md|txt)$/i;
+// Images, screenshots, the prompt log, documentation and generated eval results don't carry code risk.
+const IGNORED = /(^|\/)screenshots\/|^\.claude\/prompts\.jsonl$|^evals\/[^/]+\/results\.json$|\.(png|jpe?g|gif|svg|md|txt)$/i;
 const LOCKFILE = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|requirements\.txt|poetry\.lock|go\.sum|Cargo\.lock)$/;
 const SENSITIVE = [
   { re: /(^|\/)(db|storage|store|persist)[\w.-]*\.[jt]s$/i, what: 'storage/persistence' },
