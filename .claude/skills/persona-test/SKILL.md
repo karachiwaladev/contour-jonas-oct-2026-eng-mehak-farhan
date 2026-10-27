@@ -31,8 +31,8 @@ Arguments (`$ARGUMENTS`):
 
 ## 1. Prepare
 
-1. Check that the chrome-devtools tools are loaded: call `list_pages`. If they aren't loaded, stop and ask the owner to connect the MCP (`/mcp`). Never fall back to claiming results. If it fails with "The browser is already running for …chrome-profile", another session holds the shared browser profile. Ask the owner to add `--isolated` to the chrome-devtools MCP args (so each session gets its own temporary profile), then reconnect with `/mcp`.
-2. Serve the project in the background: `node .claude/tools/serve.js <project> 8790`. Check it with `curl -s -o /dev/null -w "%{http_code}" http://localhost:8790/`, which must return `200`.
+1. Check that the chrome-devtools tools are loaded: call `list_pages`. If they aren't loaded, stop and ask the owner to connect the MCP (`/mcp`). Never fall back to claiming results. If it fails with "The browser is already running for …chrome-profile", another session holds the shared browser profile. Ask the owner to add `--isolated` to the chrome-devtools MCP args (so each session gets its own temporary profile), then reconnect with `/mcp`. If it fails with `CONNECTION_CLOSED`, the server probably started under the default Node v14: `chrome-devtools-mcp` needs Node 20+ first on the PATH that Claude Code was started with.
+2. Check `curl -s -o /dev/null -w "%{http_code}" http://localhost:8790/`. If it already returns `200` from this project, reuse that server and don't stop it at the end. Otherwise serve the project in the background (`node .claude/tools/serve.js <project> 8790`) and check again for `200`.
 3. Read `<project>/README.md` and pick its main flows: the features list. Every subagent gets the same flows.
 4. Make the screenshot folder `<scratchpad>/persona-test/`. Screenshots are **never committed**.
 
@@ -96,4 +96,4 @@ Wait for every subagent. If one fails or times out, record it as `OUTCOME: error
 - **With `--pr <N>`:** run `gh pr comment <N> --body-file <report> --attach <png> …`. gh rewrites the image links. Then give the owner the comment link and the top findings.
 - **Without `--pr`:** show the owner the ranked findings, and where the report and screenshots are.
 - **Tickets:** ask the owner **one question**: which findings should become tickets? Open only the ones they pick, titled `Ticket: <finding>`, with the steps to reproduce. Never open tickets on your own.
-- **Clean up:** stop the server, and close any pages left open.
+- **Clean up:** stop the server if you started it, and close any pages left open.
