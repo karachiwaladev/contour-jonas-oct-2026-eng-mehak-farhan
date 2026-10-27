@@ -205,7 +205,7 @@ Run `node .claude/tools/evals/ticket-evals.js <N>` after every build (Build flow
 
 ## After a ticket: coverage eval
 
-When a `Ticket ...` issue closes as completed, `.github/workflows/coverage-eval.yml` runs `.claude/tools/evals/coverage-eval.js` and posts a `factory:eval` scorecard on the ticket. Known gap: it also runs fork PRs that say `Closes #N` ([#28](https://github.com/karachiwaladev/contour-jonas-oct-2026-eng-mehak-farhan/issues/28)).
+When a `Ticket ...` issue closes as completed, `.github/workflows/coverage-eval.yml` runs `.claude/tools/evals/coverage-eval.js` and posts a `factory:eval` scorecard on the ticket. It only runs merged PRs or open PRs from this repo on a `ticket-<N>-` branch, never forks. The `eval` job runs the tests with a read-only token, and a separate `post` job, which runs no code, posts the scorecard ([#28](https://github.com/karachiwaladev/contour-jonas-oct-2026-eng-mehak-farhan/issues/28)).
 - **Run it by hand:** `node .claude/tools/evals/coverage-eval.js <N> [--post] [--unit-only]`.
 - **What it does:** checks out the ticket's final code in a temporary worktree and measures unit and browser coverage there. It grades **every project source file the ticket changed**: ✅ ≥ 90%, ⚠️ 80–90%, ❌ below 80% or never loaded by any test. The score is out of 100.
 
