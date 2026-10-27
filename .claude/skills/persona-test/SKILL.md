@@ -5,7 +5,11 @@ description: Exploratory testing of a factory project by a panel of user persona
 
 # Persona test
 
-Scripted tests check what we thought of. This skill sends a **panel of personas** at the running app to find what we didn't think of. Each persona is a file in `personas/`, and each one runs as its **own subagent in its own isolated browser context**, all at once.
+Scripted tests check what we thought of. This skill sends a **panel of personas** at the running app to find what we didn't think of. Each persona runs as its **own subagent in its own isolated browser context**, all at once.
+
+The panel is defined in two places:
+- **`personas.yml`** is the panel in shoal's format, plus the **metrics** each persona is scored on (a measure and a target). It is the test's scorecard.
+- **`personas/<id>.md`** holds each persona's full instructions: setup, behaviour, what to try.
 
 Arguments (`$ARGUMENTS`):
 - `<project>`: the folder to serve. Default `todo`.
@@ -43,6 +47,7 @@ Send every Agent call in **one message** so they run at the same time (`subagent
 ```
 You are a persona tester. READ-ONLY for the repo: don't edit files, and don't run git or gh.
 Persona: read <repo>/.claude/skills/persona-test/personas/<id>.md and play it faithfully, in character.
+Metrics: measure each of these from personas.yml while you play: <metrics: id, measure, target>.
 App: http://localhost:8790/ (served from <project>). Main flows from its README: <flows>.
 
 Browser rules (other testers share this browser at the same time):
@@ -59,6 +64,8 @@ Browser rules (other testers share this browser at the same time):
 Reply in exactly this format, and nothing else:
 PERSONA: <id>
 OUTCOME: completed | gave-up at step <n>: <why>
+METRICS:
+- <metric id>: measured <value> | target <target> | pass|fail|not measured (<why>)
 FINDINGS:
 - [blocker|major|minor|question] <short title>
   steps: <numbered steps to reproduce>
@@ -76,13 +83,20 @@ Wait for every subagent. If one fails or times out, record it as `OUTCOME: error
    - **Severity first:** blocker, then major, then minor, then question.
    - **Then by the number of personas** that hit the issue.
 3. Before an item becomes a **blocker**, re-check it yourself on a fresh isolated page. Mark it `confirmed` or `not reproduced`.
-4. Write `<scratchpad>/persona-test/report.md`:
+4. Score the metrics: count each `pass` and `fail` against its target in `personas.yml`. A metric that wasn't measured counts as **not measured**, never as passed. A failed metric with no matching finding becomes a finding of its own (major).
+5. Write `<scratchpad>/persona-test/report.md`:
 
 ```
 ## 🧪 Persona test: <project> @ <short SHA>
-| Persona | Outcome | Findings |
-|---|---|---|
-| ⚡ Speedrun Sam | completed | 2 (1 major) |
+**Metrics score: <passed>/<measured> passed** (<n> not measured)
+| Persona | Outcome | Metrics passed | Findings |
+|---|---|---|---|
+| ⚡ Speedrun Sam | completed | 3/4 | 2 (1 major) |
+...
+### Metrics
+| Persona | Metric | Measured | Target | Result |
+|---|---|---|---|---|
+| ⚡ Sam | actions-to-add-item | 2 | <= 3 | ✅ |
 ...
 ### Findings (ranked)
 1. **[Blocker, confirmed]** <title>. Hit by: 😈 Miranda, 🐒 George

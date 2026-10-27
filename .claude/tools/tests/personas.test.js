@@ -40,6 +40,40 @@ test('each persona has every section a subagent needs', () => {
   }
 });
 
+// personas.yml is the shoal-format panel (id, emoji, name, patience_steps, profile) plus the
+// metrics each persona is scored on. Parsed with a small line reader: no YAML dependency.
+function readPanel() {
+  const text = fs.readFileSync(path.join(skillDir, 'personas.yml'), 'utf8');
+  const entries = [];
+  let current = null;
+  let metric = null;
+  for (const line of text.split(/\r?\n/)) {
+    let m;
+    if ((m = line.match(/^ {2}- id: (\S+)/))) entries.push((current = { id: m[1], metrics: [] }));
+    else if (current && (m = line.match(/^ {6}- id: (\S+)/))) current.metrics.push((metric = { id: m[1] }));
+    else if (metric && (m = line.match(/^ {8}(target|measure): (.+)/))) metric[m[1]] = m[2];
+    else if (current && (m = line.match(/^ {4}(emoji|name|patience_steps|profile|modality): ?(.*)/))) current[m[1]] = m[2];
+  }
+  return entries;
+}
+
+test('personas.yml lists the same panel as the persona files, in shoal format', () => {
+  const panel = readPanel();
+  assert.deepEqual(panel.map((p) => p.id).sort(), [...EXPECTED].sort());
+  for (const p of panel) {
+    const fm = frontmatter(fs.readFileSync(path.join(personaDir, `${p.id}.md`), 'utf8'));
+    assert.ok(p.emoji && p.name && p.profile !== undefined, `${p.id}: emoji, name, profile`);
+    assert.equal(p.patience_steps, fm.patience_steps, `${p.id}: patience_steps matches its .md`);
+  }
+});
+
+test('every persona is scored on at least two metrics, each with a target and a measure', () => {
+  for (const p of readPanel()) {
+    assert.ok(p.metrics.length >= 2, `${p.id}: at least two metrics`);
+    for (const m of p.metrics) assert.ok(m.target && m.measure, `${p.id}.${m.id}: target and measure`);
+  }
+});
+
 test('the skill lists every persona and runs each in an isolated page', () => {
   const skill = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
   assert.match(skill, /^---\r?\nname: persona-test\r?\n/);
