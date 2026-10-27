@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Task count footer (ticket #22): empty, add, tick/untick, delete, filters don't change it, recurring, reload.
+     Run: node .claude/tools/browser-test.js todo/tests/browser/counts.test.html -->
+<html><head><meta charset="utf-8"><title>count footer browser tests</title></head>
+<body>
+<script src="/.claude/tools/browser-harness.js"></script>
+<script>
+const T = FactoryTest;
+const footer = () => T.$('#task-counts').textContent;
+const titles = () => T.$$('.task label').map((l) => l.textContent);
+const rows = (title) => T.$$('.task').filter((li) => li.querySelector('label').textContent === title);
+const shows = (text) => T.until(() => footer() === text, `footer "${text}" (was "${footer()}")`);
+async function add(title, { repeat = 'none', tags = '' } = {}) {
+  T.fill('#task-title', title); T.fill('#task-tags', tags);
+  T.$('#task-repeat').value = repeat;
+  T.submit('#new-task');
+  await T.until(() => titles().includes(title), `"${title}" to appear`);
+}
+const tick = (title, on = true) => T.check(`#${rows(title).find((li) => li.classList.contains('done') !== on).querySelector('input').id}`, on);
+
+T.test('1. with no tasks the footer reads "0 open · 0 done"', async () => {
+  await T.open('/todo/index.html');
+  await shows('0 open · 0 done');
+  T.expect(T.$('#task-counts').tagName === 'FOOTER', 'it is a <footer>');
+});
+
+T.test('2. adding, ticking and unticking update the counts', async () => {
+  await add('Buy milk', { tags: 'home' });
+  await add('Write report', { tags: 'work' });
+  await shows('2 open · 0 done');
+  tick('Buy milk');
+  await shows('1 open · 1 done');
+  tick('Buy milk', false);
+  await shows('2 open · 0 done');
+  tick('Buy milk');
+  await shows('1 open · 1 done');
+});
+
+T.test('3. deleting a task updates the counts', async () => {
+  await add('Throwaway');
+  await shows('2 open · 1 done');
+  T.click(`.task[data-id="${rows('Throwaway')[0].dataset.id}"] .delete`);
+  await shows('1 open · 1 done');
+});
+
+T.test('4. status, tag and priority filters do not change the counts', async () => {
+  T.click('[data-status="done"]');
+  await T.until(() => titles().length === 1, 'Completed filter applied');
+  T.expect(footer() === '1 open · 1 done', `Completed filter: ${footer()}`);
+  T.click('[data-status="all"]');
+  await T.until(() => T.$('[data-tag="work"]'), 'tag chip');
+  T.click('[data-tag="work"]');
+  await T.until(() => titles().length === 1, 'tag filter applied');
+  T.expect(footer() === '1 open · 1 done', `tag filter: ${footer()}`);
+  T.click('#clear-tags');
+  T.click('.priority-toggle[data-priority="high"]');
+  await T.until(() => titles().length === 0, 'priority filter applied');
+  T.expect(footer() === '1 open · 1 done', `priority filter: ${footer()}`);
+  T.click('.priority-toggle[data-priority="high"]');
+  await T.until(() => titles().length === 2, 'filters cleared');
+});
+
+T.test('5. ticking a recurring task counts the history entry as done and the next one as open', async () => {
+  await add('Water plants', { repeat: 'daily' });
+  await shows('2 open · 1 done');
+  tick('Water plants');
+  await T.until(() => rows('Water plants').length === 2, 'next occurrence');
+  await shows('2 open · 2 done');
+});
+
+T.test('6. counts survive a reload', async () => {
+  await T.reload();
+  await shows('2 open · 2 done');
+});
+</script>
+</body></html>

@@ -64,5 +64,10 @@ const Render = (() => {
     els.tagChips.replaceChildren(...tags.map((tag) => tagChip(tag, filters.tags.includes(tag))));
   }
 
-  return { renderTask, renderFilters };
+  // Footer totals over all tasks, whatever filters are active.
+  function renderCounts(footer, tasks) {
+    footer.textContent = Filters.countsLabel(Filters.taskCounts(tasks));
+  }
+
+  return { renderTask, renderFilters, renderCounts };
 })();

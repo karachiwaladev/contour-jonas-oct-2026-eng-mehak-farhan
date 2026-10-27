@@ -120,3 +120,21 @@ test('loadFilters: restores saved priorities, dropping invalid ones', () => {
   const store = { getItem: () => '{"status":"open","tags":[],"priorities":["high","urgent",3,"low"]}' };
   assert.deepEqual(loadFilters(store), { status: 'open', tags: [], priorities: ['high', 'low'] });
 });
+
+test('taskCounts: counts open and done across all tasks', () => {
+  const { taskCounts } = require('../filters');
+  assert.deepEqual(taskCounts([task(), task({ done: true }), task(), task({ done: true }), task({ done: true })]), { open: 2, done: 3 });
+  assert.deepEqual(taskCounts([]), { open: 0, done: 0 });
+});
+
+test('taskCounts: stored data is untrusted; only done === true counts as done, non-objects are ignored', () => {
+  const { taskCounts } = require('../filters');
+  assert.deepEqual(taskCounts([task({ done: 'yes' }), { title: 'no done field' }, null, 'junk', 7, task({ done: true })]), { open: 2, done: 1 });
+  assert.deepEqual(taskCounts(undefined), { open: 0, done: 0 });
+});
+
+test('countsLabel: "3 open · 5 done"', () => {
+  const { countsLabel } = require('../filters');
+  assert.equal(countsLabel({ open: 3, done: 5 }), '3 open · 5 done');
+  assert.equal(countsLabel({ open: 0, done: 0 }), '0 open · 0 done');
+});

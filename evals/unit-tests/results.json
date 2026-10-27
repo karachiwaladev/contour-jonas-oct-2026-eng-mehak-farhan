@@ -1,26 +1,16 @@
 {
   "eval": "unit-tests",
-  "ticket": 16,
-  "score": 43,
-  "passed": 3,
-  "total": 7,
+  "ticket": 22,
+  "score": 33,
+  "passed": 1,
+  "total": 3,
   "prs": [
-    18
+    23
   ],
-  "head": "35a4aacc4935d8d4d65eacaef6daa968cbbcaf05",
+  "head": "bd6419262755afa13426182f1377a5c164341919",
   "cases": [
     {
       "id": "todo/app.js",
-      "pass": false,
-      "detail": "no unit test loads this file (browser tests only, or untested)"
-    },
-    {
-      "id": "todo/db.js",
-      "pass": false,
-      "detail": "no unit test loads this file (browser tests only, or untested)"
-    },
-    {
-      "id": "todo/editor.js",
       "pass": false,
       "detail": "no unit test loads this file (browser tests only, or untested)"
     },
@@ -30,20 +20,10 @@
       "detail": "unit line coverage 100% (needs 80%)"
     },
     {
-      "id": "todo/priority.js",
-      "pass": true,
-      "detail": "unit line coverage 100% (needs 80%)"
-    },
-    {
-      "id": "todo/recurrence.js",
-      "pass": true,
-      "detail": "unit line coverage 100% (needs 80%)"
-    },
-    {
       "id": "todo/render.js",
       "pass": false,
       "detail": "no unit test loads this file (browser tests only, or untested)"
     }
   ],
-  "generatedAt": "2026-10-26T17:54:16.386Z"
+  "generatedAt": "2026-10-27T06:05:58.256Z"
 }
