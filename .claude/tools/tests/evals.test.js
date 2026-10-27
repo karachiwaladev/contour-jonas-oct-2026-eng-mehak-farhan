@@ -153,3 +153,11 @@ test('merge-risk eval: documentation is not counted as risky source', () => {
   assert.match(byId['few-modules'].detail, /^1 module\(s\): todo /);
   assert.match(byId['small-diff'].detail, /^20 source lines/);
 });
+
+test('merge-risk eval: generated eval results are not counted as source', () => {
+  const f = (path, added) => ({ path, added, deleted: 0 });
+  const cases = mergeRiskCases({ files: [f('todo/app.js', 20), f('todo/tests/app.test.js', 20), f('evals/merge-risk/results.json', 60), f('evals/unit-tests/results.json', 55)] });
+  const byId = Object.fromEntries(cases.map((c) => [c.id, c]));
+  assert.match(byId['small-diff'].detail, /^20 source lines/);
+  assert.match(byId['few-modules'].detail, /^1 module\(s\): todo /);
+});

@@ -1,24 +1,24 @@
 {
   "eval": "merge-risk",
   "ticket": 16,
-  "score": 86,
-  "passed": 6,
+  "score": 71,
+  "passed": 5,
   "total": 7,
   "prs": [
     18
   ],
-  "head": "ce7c813f47936db5f16396b628744565f063b5c9",
-  "level": "Low",
+  "head": "35a4aacc4935d8d4d65eacaef6daa968cbbcaf05",
+  "level": "Medium",
   "cases": [
     {
       "id": "small-diff",
       "pass": true,
-      "detail": "239 source lines changed (safe ≤ 400)"
+      "detail": "356 source lines changed (safe ≤ 400)"
     },
     {
       "id": "few-files",
-      "pass": true,
-      "detail": "10 source files touched (safe ≤ 10)"
+      "pass": false,
+      "detail": "13 source files touched (safe ≤ 10)"
     },
     {
       "id": "few-modules",
@@ -33,7 +33,7 @@
     {
       "id": "test-ratio",
       "pass": true,
-      "detail": "test-to-source line ratio 1.05 (safe ≥ 0.60)"
+      "detail": "test-to-source line ratio 0.82 (safe ≥ 0.60)"
     },
     {
       "id": "no-high-sast-findings",
@@ -46,5 +46,5 @@
       "detail": "no dependency changes"
     }
   ],
-  "generatedAt": "2026-10-26T17:46:12.433Z"
+  "generatedAt": "2026-10-26T17:54:16.398Z"
 }
