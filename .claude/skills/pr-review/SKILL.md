@@ -12,12 +12,18 @@ Run this when a PR's work is **final**: all commits pushed, the build done, scre
 ## 1. Gather context
 
 ```
-gh pr view <PR> --json number,title,body,isDraft,headRefName,baseRefName,files,commits,labels
+gh pr view <PR> --json number,title,body,isDraft,headRefName,headRefOid,baseRefName,files,commits,labels,reviews,comments
 gh pr diff <PR>
 gh pr checks <PR>
 ```
+- **Already reviewed?** If a review or comment already contains `factory:auto-review sha=<headRefOid>`, this exact commit has been reviewed: don't post again. Report that verdict and stop.
 - From `Closes #<N>` in the body, read the ticket: `gh issue view <N> --json comments`. Take the latest `factory:plan` comment (scope, files, security, acceptance checks, test plan) and any human feedback after it. This is what the PR is reviewed **against**.
-- Check out the branch: `git switch <headRefName>`, then `git pull --ff-only`.
+- **Never switch branches in the main checkout.** Other sessions and the owner share it. Review in a separate worktree in your scratchpad, and run every command below from inside it:
+  ```
+  git fetch origin <headRefName>
+  git worktree add --detach <scratchpad>/pr-<PR> origin/<headRefName>
+  ```
+  When you're done, run `git worktree remove <scratchpad>/pr-<PR>` (never with `--force`; if it refuses, leave it and say so).
 - If CI is still running, wait for it: `gh pr checks <PR> --watch`. A red CI is automatically a **blocker**.
 
 ## 2. Re-run the checks
@@ -76,12 +82,12 @@ Body format:
 
 (If there are none: "No findings.")
 
-<!-- factory:auto-review -->
+<!-- factory:auto-review sha=<headRefOid> -->
 ```
 
 ## 5. Act on the verdict (when run by factory-loop)
 
-- **Blockers or majors:** fix them on the PR branch (test-first for bugs), push, and re-run this skill. Each round's review is posted. **At most 2 fix rounds.** If blockers or majors remain after that, leave the PR as a draft, add the `needs-attention` label (`gh label create needs-attention --color D93F0B` if it doesn't exist), and report the problem on the ticket.
+- **Blockers or majors:** fix them on the PR branch (test-first for bugs), push, and re-run this skill. Make the fixes where the branch is already checked out, if this session checked it out. Otherwise make them in a worktree on the branch: `git worktree add <scratchpad>/fix-<PR> <headRefName>`. Each round's review is posted. **At most 2 fix rounds.** If blockers or majors remain after that, leave the PR as a draft, add the `needs-attention` label (`gh label create needs-attention --color D93F0B` if it doesn't exist), and report the problem on the ticket.
 - **Only minors or nits:** fix the cheap ones, list the rest in the review as follow-ups, then continue.
 - **Ready:** mark it ready and hand it to the owner:
   ```

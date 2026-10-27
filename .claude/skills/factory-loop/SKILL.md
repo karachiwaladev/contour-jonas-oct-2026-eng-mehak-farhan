@@ -16,7 +16,7 @@ Tickets arrive as GitHub issues in this repo. This loop turns each one into **fi
 - Follow `CLAUDE.md`: one top-level folder per project, with a README, and one index row in `CLAUDE.md`.
 - **Follow the `engineering-standards` skill for all code.** Load it before planning or building. It covers security by design, TDD, the design limits (no god objects), the quality gate and the PR self-review. Use the **`testing`** skill's tools to write and run tests, and the **`pr-review`** skill to review every PR before it goes to the owner.
 - **Every repo change goes through a pull request.** Work on a ticket branch, open a PR to `main`, ask the repo owner to review it, and **never merge until they explicitly say so**. Don't commit ticket work to `main`. See **Branches and pull requests**. Owner requests without a ticket follow the same rule (a `factory-<slug>` branch and a draft PR). Before the first commit, say which branch you'll push to. Assign PRs to `@me`, never the org owner.
-- Only what is on GitHub counts. The Stop hook (`.claude/hooks/on-stop.sh`) commits only files this session edited, plus its own prompt log (only the log on `main`), at the end of every turn, and pushes the *current branch* (PR #25). So stay on the ticket branch while working, and make explicit `Ticket #<N>: ...` commits, because comments need the SHA.
+- Only what is on GitHub counts. At the end of every turn, the Stop hook (`.claude/hooks/on-stop.sh`) commits **only the files this session edited** with Edit or Write, plus the session's prompt log (only the log on `main`), and pushes the *current branch*. Files created through the shell (screenshots, generated files) are never auto-committed. So stay on the ticket branch while working, and make explicit `Ticket #<N>: ...` commits, because comments need the SHA.
 
 ## Conversation state lives in the ticket
 
@@ -164,7 +164,7 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
 ## Branches and pull requests
 
 **Branch.** Use one branch per ticket: `ticket-<N>-<short-slug>`, for example `ticket-5-filters-tags`.
-- New branch: `git switch main`, then `git pull --ff-only`, then `git switch -c ticket-<N>-<slug>`.
+- New branch: `git fetch origin`, then `git switch -c ticket-<N>-<slug> origin/main`, so a local `main` that has diverged doesn't matter. Push with `git push -u origin ticket-<N>-<slug>`. **But first check the checkout is free.** If `git status --porcelain` shows changes this session didn't make, another session or the owner is working here, so don't switch. Use a worktree instead: `git -c core.longpaths=true worktree add <scratchpad>/t<N> -b ticket-<N>-<slug> origin/main` (or `<scratchpad>/t<N> ticket-<N>-<slug>` for an existing branch), and run every command from there.
 - Existing branch (revisions, review fixes): `git switch ticket-<N>-<slug>`, then `git pull --ff-only`.
 - When the ticket's work for this run is pushed, switch back: `git switch main`.
 - Never rebase, force-push or delete branches. Always base PRs on `main`, never stack them. If a ticket needs an unmerged PR, say so in the plan and wait for that merge.

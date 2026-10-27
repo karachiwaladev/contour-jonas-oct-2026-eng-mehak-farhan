@@ -1,7 +1,8 @@
 // PreToolUse hook: deterministically blocks dangerous tool calls before they run, whatever
 // the model was told (e.g. by text in a ticket). Backs up the deny rules in settings.json,
 // which only match command prefixes, by also catching reordered flags and chained commands.
-// Blocks: recursive deletes, force pushes, downloads piped into a shell, and reading .env files.
+// Blocks: recursive deletes, force pushes, force worktree removal, downloads piped into a shell,
+// and reading .env files.
 // Exit 2 tells Claude Code to cancel the call and show the reason to the model.
 
 const DOWNLOAD = String.raw`(?:curl|wget|iwr|irm|invoke-webrequest|invoke-restmethod)`;
@@ -46,9 +47,17 @@ function isForcePush(command) {
   });
 }
 
+function isForceWorktreeRemove(command) {
+  return segments(command).some((seg) => {
+    const m = seg.match(/\bgit\b.*?\bworktree\s+remove\b(.*)$/i);
+    return Boolean(m) && tokens(m[1]).some((t) => t === '--force' || /^-[a-z]*f[a-z]*$/i.test(t));
+  });
+}
+
 function checkCommand(command) {
   if (isRecursiveDelete(command)) return 'recursive delete (rm -rf, Remove-Item -Recurse) is not allowed';
   if (isForcePush(command)) return 'force push (--force, -f, +refspec) is not allowed';
+  if (isForceWorktreeRemove(command)) return 'force-removing a worktree (git worktree remove --force) is not allowed';
   if (PIPE_TO_SHELL.some((re) => re.test(command))) return 'a download piped into a shell (curl | sh, iwr | iex) is not allowed';
   if (ENV_IN_COMMAND.test(command)) return 'commands that touch a .env file are not allowed';
   return null;
