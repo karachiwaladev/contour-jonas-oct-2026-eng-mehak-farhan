@@ -19,7 +19,7 @@ Use this with the TDD rules in `engineering-standards` §2: write one test, see 
 | Browser coverage | `node .claude/tools/browser-coverage.js [--min 80] [--warn 90]`: line coverage per source file from the browser tests (V8 coverage over the DevTools protocol). Exits 1 if any file is below `--min` or a test fails |
 | Everything, as the PR gate sees it | `node .claude/tools/quality-gate.js --base main` |
 
-`new-test.js` never overwrites an existing file. `run-tests.js` picks the newest Node 18+ it can find (this machine's default `node` is v14). Set `FACTORY_NODE` to override.
+`new-test.js` never overwrites an existing file. `run-tests.js` picks the newest Node 18+ it can find (this machine's default `node` is v14). Browser coverage needs Node 20+. Set `FACTORY_NODE` to override.
 
 ## 1. Make the code testable first
 

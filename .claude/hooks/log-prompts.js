@@ -1,12 +1,22 @@
-// Stop hook: appends the user prompts added since the last stop to .claude/prompts.jsonl.
-// Reads the hook payload (session_id, transcript_path) from stdin and remembers how many
-// transcript lines it has already scanned per session in .claude/prompts.state.json.
+// Stop hook: appends the user prompts added since the last stop to this session's own log,
+// .claude/prompts/<session>.<branch>.jsonl (one file per session and branch, so logs never
+// conflict on merge). Reads the hook payload (session_id, transcript_path) from stdin and
+// remembers how many transcript lines it has already scanned per session in .claude/prompts.state.json.
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
+const { logFileName } = require('./stop-scope');
 
-const claudeDir = path.join(__dirname, '..');
-const logFile = path.join(claudeDir, 'prompts.jsonl');
-const stateFile = path.join(claudeDir, 'prompts.state.json');
+const root = process.env.CLAUDE_PROJECT_DIR || path.join(__dirname, '..', '..');
+const stateFile = path.join(root, '.claude', 'prompts.state.json');
+
+function currentBranch() {
+  try {
+    return execFileSync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || 'HEAD';
+  } catch {
+    return 'HEAD';
+  }
+}
 
 function promptText(content) {
   if (typeof content === 'string') return content;
@@ -41,7 +51,12 @@ process.stdin.on('end', () => {
     out.push(JSON.stringify({ timestamp: entry.timestamp, session_id, uuid: entry.uuid, prompt: text }));
   }
 
-  if (out.length) fs.appendFileSync(logFile, out.join('\n') + '\n');
+  if (out.length) {
+    const logFile = path.join(root, logFileName(session_id, currentBranch()));
+    fs.mkdirSync(path.dirname(logFile), { recursive: true });
+    fs.appendFileSync(logFile, out.join('\n') + '\n');
+  }
   state[session_id] = complete.length;
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true });
   fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
 });

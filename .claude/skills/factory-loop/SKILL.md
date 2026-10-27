@@ -15,8 +15,8 @@ Tickets arrive as GitHub issues in this repo. This loop turns each one into **fi
 - Follow `README.md`: no Jonas or Contour code, and no real keys or secrets.
 - Follow `CLAUDE.md`: one top-level folder per project, with a README, and one index row in `CLAUDE.md`.
 - **Follow the `engineering-standards` skill for all code.** Load it before planning or building. It covers security by design, TDD, the design limits (no god objects), the quality gate and the PR self-review. Use the **`testing`** skill's tools to write and run tests, and the **`pr-review`** skill to review every PR before it goes to the owner.
-- **Every repo change goes through a pull request.** Work on a ticket branch, open a PR to `main`, ask the repo owner to review it, and **never merge until they explicitly say so**. Don't commit ticket work to `main`. See **Branches and pull requests**.
-- Only what is on GitHub counts. The Stop hook (`.claude/hooks/on-stop.sh`) commits anything left uncommitted at the end of every turn and pushes the *current branch*. So stay on the ticket branch while working, and make explicit `Ticket #<N>: ...` commits, because comments need the SHA.
+- **Every repo change goes through a pull request.** Work on a ticket branch, open a PR to `main`, ask the repo owner to review it, and **never merge until they explicitly say so**. Don't commit ticket work to `main`. See **Branches and pull requests**. Owner requests without a ticket follow the same rule (a `factory-<slug>` branch and a draft PR). Before the first commit, say which branch you'll push to. Assign PRs to `@me`, never the org owner.
+- Only what is on GitHub counts. At the end of every turn, the Stop hook (`.claude/hooks/on-stop.sh`) commits **only the files this session edited** with Edit or Write, plus the session's prompt log (only the log on `main`), and pushes the *current branch*. Files created through the shell (screenshots, generated files) are never auto-committed. So stay on the ticket branch while working, and make explicit `Ticket #<N>: ...` commits, because comments need the SHA.
 
 ## Conversation state lives in the ticket
 
@@ -47,7 +47,7 @@ A **human reply** is any comment *without* a factory marker. Work out the ticket
 | `review` | – | **In review**. Check the PR (see **Handling a PR in review**): merged → wrap up; change requests → address them on the branch; a merge go-ahead from the owner → merge; otherwise skip silently |
 | `done` / `declined` | yes | **Reopened conversation**. Treat the reply as a follow-up request |
 
-An approval is a human reply that clearly says yes: "approved", "approve", "lgtm", "go ahead", "ship it", "yes". If it approves *with* changes, fold the changes into the build and list them in the report.
+An approval is a human reply that clearly says yes: "approved", "approve", "lgtm", "go ahead", "ship it", "yes". If it approves *with* changes, fold the changes into the build and list them in the report. An approval given in the CLI is posted as `**Owner approved in the CLI:** "<exact words>"` with a `factory:` marker, never as a bare comment.
 
 ## The loop
 
@@ -55,9 +55,9 @@ An approval is a human reply that clearly says yes: "approved", "approve", "lgtm
    ```
    gh issue list --state open --search "Ticket in:title sort:created-asc" --json number,title,createdAt
    ```
-   If it is empty, report "No open tickets" and stop.
+   If it is empty, report "No open tickets" and stop. **"Ticket N" means the title** (`Ticket #6` is issue #16): find it with `--search "\"Ticket #<N>\" in:title"` and state both numbers before acting. Branches use the issue number.
 2. **Process each ticket in order**, finishing one (including commit and push) before the next. Waiting tickets are skipped silently.
-3. **Re-check the queue** when the list is done. If new tickets have arrived, go back to step 2. Otherwise write the summary.
+3. **Re-check the queue** when the list is done. If new tickets have arrived, go back to step 2. Otherwise write the summary. Under `/loop`, use an interval of at least 5 minutes, and print one line on idle runs. After 5 idle runs in a row, stop the loop and say what each ticket waits on.
 
 ## Per-ticket steps
 
@@ -91,7 +91,7 @@ Keep the single quotes: without them PowerShell reads `{owner}`/`{repo}` as scri
 
 ### 1. Clarify (stage `questions`)
 
-**Ask questions one at a time: one question per comment, then wait for the reply.** The owner asked for this. Never batch questions in one comment.
+**Ask questions one at a time: one question per comment, then wait for the reply.** The owner asked for this. Never batch questions in one comment. If the owner is in this session, also ask that one question in the CLI (`AskUserQuestion`), and post their answer on the ticket.
 
 Before writing any code, list the questions privately: specific ones only, whose answers change what gets built, each with a default. Then post the **first** comment:
 - **Understanding:** the request restated in one or two lines.
@@ -120,7 +120,7 @@ Leave the ticket open. Don't build until there is an approval.
 
 ### 3. Build
 
-- Create or switch to the ticket branch first (see **Branches and pull requests**).
+- Create or switch to the ticket branch first (see **Branches and pull requests**). Check now that the chrome-devtools tools are loaded (if not, ask the owner to run `/mcp`). Always verify through `serve.js`, never `file://`.
 - Work only in the planned folder(s), plus the `CLAUDE.md` index row and the project README.
 - Keep to the approved plan. If it has to change, note the change for the report. If the change is significant, post a revised plan and wait again.
 - **Build test-first** (engineering-standards §2), one behaviour at a time: write a test, see it fail, write the minimum code to pass, then refactor while it stays green. Never weaken or skip a test to get green.
@@ -143,7 +143,7 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
 
 ### 5. Commit, push, open the PR (stage `review`)
 
-1. Re-run the quality gate (`node .claude/tools/quality-gate.js --base main`). **No PR while any check is ❌.** Then self-review the diff against the engineering-standards §5 checklist and fix what it finds.
+1. Re-run the quality gate (`node .claude/tools/quality-gate.js --base main`). **No PR while any check is ❌.** Chain the commit on it (`node .claude/tools/quality-gate.js --base main && git commit …`), so a ❌ can never be committed. Then self-review the diff against the engineering-standards §5 checklist and fix what it finds.
 2. On the ticket branch, commit the project, tests and `CLAUDE.md` together as `Ticket #<N>: <summary>` (no screenshots), then push the branch.
 3. Get the repo name and SHA: `gh repo view --json nameWithOwner -q .nameWithOwner` and `git rev-parse HEAD`.
 4. Open the PR (see **Branches and pull requests**). Fill in every section of `.github/pull_request_template.md`:
@@ -155,7 +155,7 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
    - the screenshots, referenced in the body file as `![<what>](./shots/<file>.png)` (paths relative to the body file) and uploaded by passing each one as `--attach <file>` to `gh pr create` / `gh pr edit` (gh ≥ 2.99). gh rewrites the references to `user-attachments` URLs. The same flag works on `gh issue comment` and `gh pr comment`
    - risks and rollback
    - `Closes #<N>`
-   The PR opens as a **draft**. CI re-runs the gate with gitleaks, osv-scanner and semgrep, runs the unit and browser tests, and CodeQL scans the code. If CI fails, fix it on the branch.
+   The PR opens as a **draft**. CI re-runs the gate, the unit and browser tests, and the security scanners listed in `CLAUDE.md`. If CI fails, fix it on the branch.
 5. **Run the coverage eval on the draft PR:** `node .claude/tools/evals/coverage-eval.js <N>` (it evaluates open PRs too). Every source file the ticket changed must be ≥ 80% (target 90%). Add real tests for any ❌ before review, and put the score in the PR body.
    Then **run the unit-tests and merge-risk evals:** `node .claude/tools/evals/ticket-evals.js <N>`. It writes `evals/unit-tests/results.json` and `evals/merge-risk/results.json` as `{score, cases: [{id, pass, detail}]}`. **Commit both files to the ticket branch** (`Ticket #<N>: eval results`) and push. Put both scores in the PR body.
 6. **Run the `pr-review` skill on the PR** once the work is final and CI has finished. It re-runs every check, reviews the diff against the plan and the standards, and posts its review on the PR. It fixes blockers and majors (up to 2 rounds), then marks the PR ready (`gh pr ready`) with the `awaiting-review` label. If it can't get the PR clean, the PR stays a draft labelled `needs-attention`. Report that on the ticket instead of step 7.
@@ -164,21 +164,21 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
 ## Branches and pull requests
 
 **Branch.** Use one branch per ticket: `ticket-<N>-<short-slug>`, for example `ticket-5-filters-tags`.
-- New branch: `git switch main`, then `git pull --ff-only`, then `git switch -c ticket-<N>-<slug>`.
+- New branch: `git fetch origin`, then `git switch -c ticket-<N>-<slug> origin/main`, so a local `main` that has diverged doesn't matter. Push with `git push -u origin ticket-<N>-<slug>`. **But first check the checkout is free.** If `git status --porcelain` shows changes this session didn't make, another session or the owner is working here, so don't switch. Use a worktree instead: `git -c core.longpaths=true worktree add <scratchpad>/t<N> -b ticket-<N>-<slug> origin/main` (or `<scratchpad>/t<N> ticket-<N>-<slug>` for an existing branch), and run every command from there.
 - Existing branch (revisions, review fixes): `git switch ticket-<N>-<slug>`, then `git pull --ff-only`.
 - When the ticket's work for this run is pushed, switch back: `git switch main`.
-- Never rebase, force-push or delete branches.
+- Never rebase, force-push or delete branches. Always base PRs on `main`, never stack them. If a ticket needs an unmerged PR, say so in the plan and wait for that merge.
 
 **Open the PR** (once per ticket, after the first push of the branch). Write the body to a scratchpad file first:
 ```
-gh pr create --draft --base main --head ticket-<N>-<slug> --title "Ticket #<N>: <summary>" --body-file <file> --reviewer <owner-login> --assignee <owner-login>
+gh pr create --draft --base main --head ticket-<N>-<slug> --title "Ticket #<N>: <summary>" --body-file <file> --assignee @me
 ```
-- `<owner-login>` is the repo owner: `gh repo view --json owner -q .owner.login`.
+- `@me` is the owner, because the factory runs as the owner's account. The repo owner is an org, and an org can't be assigned.
 - If the `awaiting-review` label doesn't exist yet, create it once: `gh label create awaiting-review --color FBCA04 --description "Factory PR waiting for owner review"`.
-- GitHub won't request a review from the PR's author. When the factory runs as the owner's account, the `--reviewer` request is silently dropped (or, on some versions, errors: then retry without `--reviewer`). The assignee and the `awaiting-review` label mark it for the owner.
+- There's no `--reviewer`, because GitHub won't request a review from the PR's author. The assignee and the `awaiting-review` label mark the PR for the owner.
 - If a PR for the branch already exists (`gh pr list --head <branch>`), push to it and comment on it instead of opening another.
 
-**Never merge on your own.** `gh pr merge` needs an **explicit go-ahead from the owner** given in this session, on the PR, or on the ticket: "merge", "merge it", "ship it" (after review), or an approving review that also says to merge. An approving review alone, a 👍, or silence is **not** a go-ahead. Settings also make `gh pr merge` prompt for permission.
+**Never merge on your own.** `gh pr merge` needs an **explicit go-ahead from the owner** given in this session, on the PR, or on the ticket: "merge", "merge it", "ship it" (after review), or an approving review that also says to merge. An approving review alone, a 👍, or silence is **not** a go-ahead. Settings also make `gh pr merge` prompt for permission. A dismissed or rejected merge question is a **no**, and a go-ahead for something else is not one. Merge only when `gh pr view <PR> --json mergeStateStatus` is `CLEAN`.
 
 ### Handling a PR in review
 
@@ -205,7 +205,7 @@ Run `node .claude/tools/evals/ticket-evals.js <N>` after every build (Build flow
 
 ## After a ticket: coverage eval
 
-When a `Ticket ...` issue closes as completed, `.github/workflows/coverage-eval.yml` runs `.claude/tools/evals/coverage-eval.js` and posts a `factory:eval` scorecard on the ticket.
+When a `Ticket ...` issue closes as completed, `.github/workflows/coverage-eval.yml` runs `.claude/tools/evals/coverage-eval.js` and posts a `factory:eval` scorecard on the ticket. Known gap: it also runs fork PRs that say `Closes #N` ([#28](https://github.com/karachiwaladev/contour-jonas-oct-2026-eng-mehak-farhan/issues/28)).
 - **Run it by hand:** `node .claude/tools/evals/coverage-eval.js <N> [--post] [--unit-only]`.
 - **What it does:** checks out the ticket's final code in a temporary worktree and measures unit and browser coverage there. It grades **every project source file the ticket changed**: ✅ ≥ 90%, ⚠️ 80–90%, ❌ below 80% or never loaded by any test. The score is out of 100.
 
@@ -217,7 +217,7 @@ If a file scores ❌ after the merge, open a follow-up ticket to add the missing
 
 ## Posting comments
 
-Write each comment body to a file in the scratchpad first, then `gh issue comment <N> --body-file <file>`. This avoids PowerShell quoting problems. The last line of every factory comment is its stage marker. Never post a comment that repeats one already on the ticket.
+Write each comment body to a file in the scratchpad first, then `gh issue comment <N> --body-file <file>`. This avoids PowerShell quoting problems. Run `gh … --jq` and `claude -p "/cmd"` from Bash, with `MSYS_NO_PATHCONV=1` for the latter. Put scripts in files instead of `node -e`. The last line of every factory comment is its stage marker. Never post a comment that repeats one already on the ticket.
 
 ## Summary
 

@@ -57,3 +57,11 @@ test('ignores tools it does not guard and missing input', () => {
   assert.equal(checkToolCall({ tool_name: 'Bash' }), null);
   assert.equal(checkToolCall({}), null);
 });
+
+test('blocks force-removing a worktree, which discards its uncommitted work', () => {
+  for (const c of ['git worktree remove --force /tmp/x', 'git worktree remove -f /tmp/x', 'cd a && git worktree remove /tmp/x -f']) {
+    assert.match(bash(c), /force-removing a worktree/, c);
+  }
+  assert.equal(bash('git worktree remove /tmp/pr-5'), null);
+  assert.equal(bash('git worktree add --detach /tmp/pr-5 origin/ticket-5-x'), null);
+});

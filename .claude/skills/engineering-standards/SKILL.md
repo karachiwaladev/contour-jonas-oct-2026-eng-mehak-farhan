@@ -32,7 +32,7 @@ Rules:
 - **Never weaken, skip, delete or `.only` a test to get green.** If a test is wrong, say why in the PR and fix it deliberately.
 - **Bug fixes start with a failing test** that reproduces the bug.
 - Keep pure logic (parsing, sorting, filtering, validation) in modules separate from DOM, network and storage code, so it can be unit-tested with `node --test` and no browser.
-- **Test setup per project:** add a `package.json` with `"test": "node --test tests/"`, and put tests in `<project>/tests/*.test.js` (or `.mjs`). That needs Node 18+: run with `C:\Users\FARHAMEH\AppData\Local\Author Software\nvm\installs\v20.20.2\node.exe` locally, since the default `node` is v14. CI uses Node 20.
+- **Test setup per project:** add a `package.json` with `"test": "node --test tests/"`, and put tests in `<project>/tests/*.test.js` (or `.mjs`). That needs Node 18+, and this machine's default `node` is v14: run tests through `node .claude/tools/run-tests.js`, which finds a newer Node itself (set `FACTORY_NODE` to override). CI uses Node 20.
 - Browser behaviour is still verified end to end with the chrome-devtools MCP (factory-loop step 4). Unit tests and browser checks complement each other.
 
 ## 3. Design limits: no god objects
@@ -70,7 +70,7 @@ When a file approaches its limit, split it by responsibility as part of the curr
    - [ ] User input is escaped or validated, there are no secrets, and errors are handled.
    - [ ] README and `CLAUDE.md` index are updated if behaviour or structure changed.
    - [ ] Screenshots are present for UI changes.
-3. Fill in `.github/pull_request_template.md`. CI (`.github/workflows/quality-gate.yml`) re-runs the gate with gitleaks and osv-scanner on every PR.
+3. Fill in `.github/pull_request_template.md`. CI (`.github/workflows/quality-gate.yml`) re-runs the gate and the security scanners listed in `CLAUDE.md` on every PR.
 
 ## Tools
 
