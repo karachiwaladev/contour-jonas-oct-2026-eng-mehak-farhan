@@ -18,7 +18,11 @@ gh pr checks <PR>
 ```
 - From `Closes #<N>` in the body, read the ticket: `gh issue view <N> --json comments`. Take the latest `factory:plan` comment (scope, files, security, acceptance checks, test plan) and any human feedback after it. This is what the PR is reviewed **against**.
 - Check out the branch: `git switch <headRefName>`, then `git pull --ff-only`.
-- If CI is still running, wait for it: `gh pr checks <PR> --watch`. A red CI is automatically a **blocker**.
+- **CI:** `gh pr checks` exits with **8 when checks are still pending**. That isn't a failure.
+  - If CI is pending, wait in the background (`gh pr checks <PR> --watch`, run in the background), and post a one-line status while you review the diff.
+  - If it's still pending when your review is done, post the review with "CI: pending" and re-check before marking the PR ready.
+  - A red CI is automatically a **blocker**.
+- **No ticket?** A PR from an owner request (body says "Owner request in session", on a `factory-` or `chore-` branch) is reviewed against the request in its body instead of a plan. A missing `Closes #` is not a finding.
 
 ## 2. Re-run the checks
 

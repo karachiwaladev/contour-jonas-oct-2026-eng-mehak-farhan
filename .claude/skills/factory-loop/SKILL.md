@@ -25,6 +25,7 @@ Every comment the factory posts ends with a hidden marker naming its stage:
 | Marker | Posted when |
 |---|---|
 | `<!-- factory:questions k/N -->` | One clarifying question, number k of N (build work, or an unclear ticket). Bare `factory:questions` on older comments means all questions were asked at once |
+| `<!-- factory:answer k/N -->` | The owner's answer to question k, given in the CLI and relayed to the ticket. **Counts as a human reply** |
 | `<!-- factory:plan -->` | A plan awaiting approval |
 | `<!-- factory:building -->` | Approved work that is built and pushed but not yet browser-verified (e.g. chrome-devtools MCP unavailable) |
 | `<!-- factory:review -->` | Work is in an open PR, awaiting the owner's review and go-ahead to merge |
@@ -56,8 +57,17 @@ An approval is a human reply that clearly says yes: "approved", "approve", "lgtm
    gh issue list --state open --search "Ticket in:title sort:created-asc" --json number,title,createdAt
    ```
    If it is empty, report "No open tickets" and stop.
+
+   **"Ticket N" means the title, not the issue number.** Workshop tickets carry their own number in the title, and it often differs from the issue number (for example, `Ticket #6` is issue #16). When the owner names a ticket, find it by title: `gh issue list --state all --search "\"Ticket #<N>\" in:title"`. If the two numbers differ, state both in one line before acting ("Ticket #6 = issue #16"). Branches, commits and `Closes #` always use the **issue** number. A bare `$ARGUMENTS` number is an issue number.
 2. **Process each ticket in order**, finishing one (including commit and push) before the next. Waiting tickets are skipped silently.
 3. **Re-check the queue** when the list is done. If new tickets have arrived, go back to step 2. Otherwise write the summary.
+
+### Running on a schedule (`/loop`)
+
+- **Interval:** use at least **5 minutes** (`/loop 5m /factory-loop`). Tickets change at human speed, so a 1-minute loop mostly burns runs. If asked for a shorter interval, say so once and suggest 5–10 minutes.
+- **Idle runs:** a run where every ticket is waiting (or there are none) prints one line ("No change: #6 waits on question 2/3"), not a summary table.
+- **Stop when blocked:** after **5 idle runs in a row**, stop the loop and tell the owner what each ticket waits on. A loop that's blocked on the owner can't unblock itself.
+- **Long waits on a question:** if a question has waited through 3 or more runs and the owner is in this session, ask it in the CLI (see **Clarify**). Don't keep skipping it silently.
 
 ## Per-ticket steps
 
@@ -100,6 +110,8 @@ Before writing any code, list the questions privately: specific ones only, whose
 - End with: "Reply with your answer, **ok** for the default, or **ok to all** to accept every remaining default." and the marker `<!-- factory:questions 1/N -->`.
 
 After each reply, post the next comment with just a one-line note of the answer recorded and **Question k of N**, ending with `<!-- factory:questions k/N -->`. Drop or reword later questions that an earlier answer has made moot, and adjust N. After the last answer (or **ok to all**), go to **Plan**.
+
+**When the owner is in this session** (they typed the request or started the loop here), they may not be watching GitHub. Post the question on the ticket as above, **and** ask the same single question in the CLI with `AskUserQuestion` (its default first, marked "(Recommended)"). When they answer in the CLI, record it on the ticket as `**Owner answered in the CLI:** <answer>`, ending with `<!-- factory:answer k/N -->`. A `factory:answer` comment counts as the human reply to question k. If they dismiss the CLI question, don't ask it again in the CLI; wait for a reply on the ticket.
 
 Leave the ticket open and move on while waiting.
 
@@ -168,14 +180,15 @@ If the chrome-devtools tools are unavailable, don't open the PR for review yet. 
 - Existing branch (revisions, review fixes): `git switch ticket-<N>-<slug>`, then `git pull --ff-only`.
 - When the ticket's work for this run is pushed, switch back: `git switch main`.
 - Never rebase, force-push or delete branches.
+- **Always base PRs on `main`; never stack them.** A PR whose base is another feature branch gets merged into that branch instead of `main`. If a ticket depends on a PR that hasn't merged yet, say so in the plan and wait for the merge before building.
 
 **Open the PR** (once per ticket, after the first push of the branch). Write the body to a scratchpad file first:
 ```
-gh pr create --draft --base main --head ticket-<N>-<slug> --title "Ticket #<N>: <summary>" --body-file <file> --reviewer <owner-login> --assignee <owner-login>
+gh pr create --draft --base main --head ticket-<N>-<slug> --title "Ticket #<N>: <summary>" --body-file <file> --assignee @me
 ```
-- `<owner-login>` is the repo owner: `gh repo view --json owner -q .owner.login`.
+- `@me` is the owner: the factory runs as the owner's GitHub account. Don't use `gh repo view --json owner`, because the repo owner here is an **organisation**, and assigning it fails with "Only users and bots can be assigned".
 - If the `awaiting-review` label doesn't exist yet, create it once: `gh label create awaiting-review --color FBCA04 --description "Factory PR waiting for owner review"`.
-- GitHub won't request a review from the PR's author. When the factory runs as the owner's account, the `--reviewer` request is silently dropped (or, on some versions, errors: then retry without `--reviewer`). The assignee and the `awaiting-review` label mark it for the owner.
+- There's no `--reviewer`: GitHub won't request a review from the PR's own author. The assignee and the `awaiting-review` label mark the PR for the owner.
 - If a PR for the branch already exists (`gh pr list --head <branch>`), push to it and comment on it instead of opening another.
 
 **Never merge on your own.** `gh pr merge` needs an **explicit go-ahead from the owner** given in this session, on the PR, or on the ticket: "merge", "merge it", "ship it" (after review), or an approving review that also says to merge. An approving review alone, a 👍, or silence is **not** a go-ahead. Settings also make `gh pr merge` prompt for permission.
@@ -191,6 +204,13 @@ For a ticket whose latest factory comment is `review`, check `gh pr view <branch
 | **Merge go-ahead from the owner** | Run `gh pr merge <PR> --squash`. Keep the branch: no `--delete-branch`. Then do what the **Merged** row says. |
 | **Closed without merging** | Leave the ticket open. Post a `factory:declined`-style note asking what to do next, but only once. |
 | Anything else | Waiting. Skip silently. |
+
+## Owner requests outside a ticket
+
+When the owner asks in the session for a repo change that has no ticket (factory fixes, tooling, docs):
+1. **Restate the scope in one line, and build only that.** If they named one thing ("only the coverage eval"), don't add the rest.
+2. Before the first commit, say which branch it's going on: `factory-<slug>` for factory changes, `chore-<slug>` for anything else, branched from `origin/main`.
+3. The same rules as tickets apply: engineering-standards, the quality gate, tests first, and **always open a draft PR** assigned to `@me`. There's no `Closes #`; the PR body says "Owner request in session" instead. Never leave the work on a branch without a PR, and never commit it to `main`.
 
 ## After every build: unit-tests and merge-risk evals
 
