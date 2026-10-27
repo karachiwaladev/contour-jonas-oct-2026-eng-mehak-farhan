@@ -1,39 +1,39 @@
 {
   "eval": "merge-risk",
-  "ticket": 22,
-  "score": 100,
-  "passed": 7,
+  "ticket": 28,
+  "score": 86,
+  "passed": 6,
   "total": 7,
   "prs": [
-    23
+    31
   ],
-  "head": "bd6419262755afa13426182f1377a5c164341919",
+  "head": "38a492da4b0d8bf7bf25efa5c7c23503c72cd467",
   "level": "Low",
   "cases": [
     {
       "id": "small-diff",
       "pass": true,
-      "detail": "24 source lines changed (safe ≤ 400)"
+      "detail": "62 source lines changed (safe ≤ 400)"
     },
     {
       "id": "few-files",
       "pass": true,
-      "detail": "5 source files touched (safe ≤ 10)"
+      "detail": "2 source files touched (safe ≤ 10)"
     },
     {
       "id": "few-modules",
       "pass": true,
-      "detail": "1 module(s): todo (safe ≤ 2)"
+      "detail": "2 module(s): .claude, .github (safe ≤ 2)"
     },
     {
       "id": "no-sensitive-areas",
-      "pass": true,
-      "detail": "no sensitive areas touched"
+      "pass": false,
+      "detail": "touches CI workflows"
     },
     {
       "id": "test-ratio",
       "pass": true,
-      "detail": "test-to-source line ratio 3.92 (safe ≥ 0.60)"
+      "detail": "test-to-source line ratio 0.87 (safe ≥ 0.60)"
     },
     {
       "id": "no-high-sast-findings",
@@ -46,5 +46,5 @@
       "detail": "no dependency changes"
     }
   ],
-  "generatedAt": "2026-10-27T06:05:58.269Z"
+  "generatedAt": "2026-10-27T07:08:42.939Z"
 }
