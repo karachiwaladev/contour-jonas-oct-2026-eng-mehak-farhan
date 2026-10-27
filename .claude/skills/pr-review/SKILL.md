@@ -18,11 +18,7 @@ gh pr checks <PR>
 ```
 - From `Closes #<N>` in the body, read the ticket: `gh issue view <N> --json comments`. Take the latest `factory:plan` comment (scope, files, security, acceptance checks, test plan) and any human feedback after it. This is what the PR is reviewed **against**.
 - Check out the branch: `git switch <headRefName>`, then `git pull --ff-only`.
-- **CI:** `gh pr checks` exits with **8 when checks are still pending**. That isn't a failure.
-  - If CI is pending, wait in the background (`gh pr checks <PR> --watch`, run in the background), and post a one-line status while you review the diff.
-  - If it's still pending when your review is done, post the review with "CI: pending" and re-check before marking the PR ready.
-  - A red CI is automatically a **blocker**.
-- **No ticket?** A PR from an owner request (body says "Owner request in session", on a `factory-` or `chore-` branch) is reviewed against the request in its body instead of a plan. A missing `Closes #` is not a finding.
+- If CI is still running, wait for it: `gh pr checks <PR> --watch`. A red CI is automatically a **blocker**.
 
 ## 2. Re-run the checks
 
@@ -35,6 +31,12 @@ node .claude/tools/browser-coverage.js       # browser coverage per file (fails 
 ```
 A file below 80% line coverage is a **major** finding, and below 90% a **minor** one, unless the PR explains why. List any uncovered error paths.
 Any ❌ is a **blocker**. Every ⚠️ needs a justification in the PR body, or it becomes a **minor** finding.
+
+**Pending CI.** `gh pr checks` exits with **8 when checks are still pending**. That's not a failure.
+- Run the `--watch` from step 1 in the background, and post a one-line status while you review the diff.
+- If CI is still pending when your review is done, post the review with "CI: pending", and re-check before marking the PR ready.
+
+**PRs with no ticket.** A PR from an owner request (body says "Owner request in session", on a `factory-` or `chore-` branch) is reviewed against the request in its body instead of a plan. A missing `Closes #` is not a finding.
 
 ## 3. Review the diff
 
